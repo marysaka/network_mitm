@@ -1,0 +1,41 @@
+name: Build
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+
+    defaults:
+      run:
+        shell: 'bash'
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+
+      - name: Build libnx
+        run: |
+          git clone https://github.com/Atmosphere-NX/libnx.git --branch 1600_support /tmp/libnx
+          pushd /tmp/libnx
+          make PREFIX="ccache aarch64-none-elf-"
+          make install
+          popd
+
+      - name: Build
+        run: make PREFIX="ccache aarch64-none-elf-"
+
+      - name: Uploading executable out directory
+        uses: actions/upload-artifact@v3
+        with:
+          name: network_mitm.zip
+          path: network_mitm/out/*
+
+      - name: Uploading release
+        uses: actions/upload-artifact@v3
+        with:
+          name: network_mitm.zip
+          path: out/*.zip

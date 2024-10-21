@@ -1,15 +1,15 @@
 # network_mitm
 
-Nintendo Switch Network mitm sysmodule.
+Nintendo Switch Network MITM sysmodule.
 
 network_mitm allows you to:
 - Dump traffic from SSL of the running game (NEX,...) in PCAP files.
-- Mitm ssl to replace `NintendoClass2CAG3` CA with a user provided one (useful for NPLN traffic capture)
+- Mitm ssl to replace `NintendoClass2CAG3` CA with a user provided one (useful for NPLN traffic capture).
 
 More features might appears depending of the needs.
 
 ## Configuration
-The following configuration should go in `/atmosphere/config/system_settings.ini`:
+The following configuration should be added to `/atmosphere/config/system_settings.ini`:
 
 ```ini
 ; network_mitm config

@@ -19,7 +19,7 @@ jobs:
 
       - name: Build libnx
         run: |
-          git clone https://github.com/Atmosphere-NX/libnx.git --branch 1600_support /tmp/libnx
+          git clone https://github.com/Atmosphere-NX/libnx.git --branch 1900_support /tmp/libnx
           pushd /tmp/libnx
           make PREFIX="ccache aarch64-none-elf-"
           make install

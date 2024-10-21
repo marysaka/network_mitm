@@ -8,6 +8,23 @@ network_mitm allows you to:
 
 More features might appears depending of the needs.
 
+## Configuration
+The following configuration should go in `/atmosphere/config/system_settings.ini`:
+
+```ini
+; network_mitm config
+[network_mitm]
+; Enable SSL: This should be set to 1 for certificate swapping, and also for PCAP capturing.
+enable_ssl = u8!0x1
+; Root CA filename: this should be present in the root of the SD (sd:/rootCA.pem for the below example)
+custom_ca_public_cert = str!rootCA.pem
+; By default, the sysmodule will dump decrypted network traffic user-link PCAPs to the SD card.
+; Uncomment this line to disable.
+; should_dump_ssl_traffic = u8!0x0
+; Possible values "ethernet", "ip" or "user"
+; pcap_link_type = str!user
+```
+
 ## Building
 
 Make sure that the submodules are initialized and up to date.

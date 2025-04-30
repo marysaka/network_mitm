@@ -16,7 +16,7 @@
 #pragma once
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
-#include "impl/pcap/pcap_file_writter.hpp"
+#include "impl/pcap/pcap_file_writer.hpp"
 #include "impl/pcap/pcap_utils.hpp"
 
 using namespace ams::ssl::mitm::pcap;
@@ -49,9 +49,17 @@ using namespace ams::ssl::mitm::pcap;
     AMS_SF_METHOD_INFO(C, H, 24, Result, GetVerifyCertErrors, (ams::sf::Out<u32> unk0, ams::sf::Out<u32> unk1, const ams::sf::OutBuffer &unk2), (unk0, unk1, unk2)) \
     AMS_SF_METHOD_INFO(C, H, 25, Result, GetCipherInfo, (u32 unk0, const ams::sf::OutBuffer &cipher_info), (unk0, cipher_info), hos::Version_4_0_0) \
     AMS_SF_METHOD_INFO(C, H, 26, Result, SetNextAlpnProto, (const ams::sf::InBuffer &alpn_proto), (alpn_proto), hos::Version_9_0_0) \
-    AMS_SF_METHOD_INFO(C, H, 27, Result, GetNextAlpnProto, (ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto), (state, alpn_proto_out_size, alpn_proto), hos::Version_9_0_0)
+    AMS_SF_METHOD_INFO(C, H, 27, Result, GetNextAlpnProto, (ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto), (state, alpn_proto_out_size, alpn_proto), hos::Version_9_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 28, Result, SetDtlsSocketDescriptor, (s32 sock_fd, const ams::sf::InBuffer &sock_addr, ams::sf::Out<s32> out_sock_fd), (sock_fd, sock_addr, out_sock_fd), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 29, Result, GetDtlsHandshakeTimeout, (const ams::sf::OutBuffer &timespan), (timespan), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 30, Result, SetPrivateOption, (bool value, const ams::ssl::sf::OptionType &option), (value, option), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 31, Result, SetSrtpCiphers, (const ams::sf::InBuffer &ciphers), (ciphers), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 32, Result, GetSrtpCipher, (ams::sf::Out<u16> cipher), (cipher), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 33, Result, ExportKeyingMaterial, (const ams::sf::OutBuffer &material, const ams::sf::InBuffer &label, const ams::sf::InBuffer &context), (material, label, context), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 34, Result, SetIoTimeout, (u32 timeout), (timeout), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 35, Result, GetIoTimeout, (ams::sf::Out<u32> timeout), (timeout), hos::Version_16_0_0)
 
-AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslConnection, AMS_INTERFACE_ISSLCONNECTION_INFO, 0xA9B8D9AA)
+AMS_SF_DEFINE_MITM_INTERFACE(ams::ssl::sf, ISslConnection, AMS_INTERFACE_ISSLCONNECTION_INFO, 0xA9B8D9AA)
 
 
 namespace ams::ssl::sf::impl {
@@ -59,18 +67,22 @@ namespace ams::ssl::sf::impl {
         protected:
             std::shared_ptr<::Service> m_forward_service;
             sm::MitmProcessInfo m_client_info;
-            PcapFileWriter *m_writter;
+            PcapFileWriter *m_writer;
+            bool m_should_disable_ssl_verification;
+            ams::ssl::sf::VerifyOption m_requested_option = (ams::ssl::sf::VerifyOption)3;
+            bool m_requested_default_verify;
         public:
-            SslConnectionImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, PcapFileWriter *writter) : m_forward_service(std::move(s)), m_client_info(c), m_writter(writter) { }
+            SslConnectionImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, PcapFileWriter *writer, bool should_disable_ssl_verification) : m_forward_service(std::move(s)), m_client_info(c), m_writer(writer), m_should_disable_ssl_verification(should_disable_ssl_verification) { }
             ~SslConnectionImpl() {
-                if (m_writter != nullptr) {
-                    delete m_writter;
+                if (m_writer != nullptr) {
+                    delete m_writer;
                 }
             }
 
             Result SetSocketDescriptor(u32 input_socket_fd, ams::sf::Out<u32> output_socket_fd);
             Result SetHostName(const ams::sf::InBuffer &hostname);
             Result SetVerifyOption(const ams::ssl::sf::VerifyOption &option);
+            Result SetVerifyOptionReal(const ams::ssl::sf::VerifyOption &option);
             Result SetIoMode(const ams::ssl::sf::IoMode &mode);
             Result GetSocketDescriptor(ams::sf::Out<u32> socket_fd);
             Result GetHostName(ams::sf::Out<u32> hostname_length, const ams::sf::OutBuffer &hostname);
@@ -91,11 +103,21 @@ namespace ams::ssl::sf::impl {
             Result SetRenegotiationMode(const ams::ssl::sf::RenegotiationMode &mode);
             Result GetRenegotiationMode(ams::sf::Out<ams::ssl::sf::RenegotiationMode> mode);
             Result SetOption(bool value, const ams::ssl::sf::OptionType &option);
+            Result SetOptionReal(bool value, const ams::ssl::sf::OptionType &option);
             Result GetOption(const ams::ssl::sf::OptionType &value, ams::sf::Out<bool> option);
             Result GetVerifyCertErrors(ams::sf::Out<u32> unk0, ams::sf::Out<u32> unk1, const ams::sf::OutBuffer &unk2);
             Result GetCipherInfo(u32 unk0, const ams::sf::OutBuffer &cipher_info);
             Result SetNextAlpnProto(const ams::sf::InBuffer &alpn_proto);
             Result GetNextAlpnProto(ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto);
+            Result SetDtlsSocketDescriptor(s32 sock_fd, const ams::sf::InBuffer &sock_addr, ams::sf::Out<s32> out_sock_fd);
+            Result GetDtlsHandshakeTimeout(const ams::sf::OutBuffer &timespan);
+            Result SetPrivateOption(bool value, const ams::ssl::sf::OptionType &option);
+            Result SetPrivateOptionReal(bool value, const ams::ssl::sf::OptionType &option);
+            Result SetSrtpCiphers(const ams::sf::InBuffer &ciphers);
+            Result GetSrtpCipher(ams::sf::Out<u16> cipher);
+            Result ExportKeyingMaterial(const ams::sf::OutBuffer &material, const ams::sf::InBuffer &label, const ams::sf::InBuffer &context);
+            Result SetIoTimeout(u32 timeout);
+            Result GetIoTimeout(ams::sf::Out<u32> timeout);
     };
 
     static_assert(ams::ssl::sf::IsISslConnection<ams::ssl::sf::impl::SslConnectionImpl>);

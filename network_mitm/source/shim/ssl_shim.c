@@ -28,6 +28,18 @@ Result sslCreateContext_sfMitm(Service *s, u32 version, u64 pid_placeholder,
                                  .out_num_objects = 1, .out_objects = out);
 }
 
+Result sslCreateContextForSystem_sfMitm(Service *s, u32 version, u64 pid_placeholder,
+                                        u64 client_pid, Service *out) {
+    const struct {
+        u32 version;
+        u64 pid_placeholder;
+    } in = {version, pid_placeholder};
+
+    return serviceMitmDispatchIn(s, 100, in, .in_send_pid = true,
+                                 .override_pid = client_pid,
+                                 .out_num_objects = 1, .out_objects = out);
+}
+
 Result sslGetContextCount_sfMitm(Service *s, u32 *count) {
     return serviceMitmDispatchOut(s, 1, *count);
 }
@@ -102,6 +114,10 @@ Result sslContextCreateConnection_sfMitm(Service *s, Service *out) {
     return serviceMitmDispatch(s, 2, .out_num_objects = 1, .out_objects = out);
 }
 
+Result sslContextCreateConnectionEx_sfMitm(Service *s, Service *out) {
+    return serviceMitmDispatch(s, 100, .out_num_objects = 1, .out_objects = out);
+}
+
 Result sslContextGetConnectionCount_sfMitm(Service *s, u32 *count) {
     return serviceMitmDispatchOut(s, 3, *count);
 }
@@ -161,6 +177,50 @@ Result sslContextImportCrl_sfMitm(Service *s, const void *crl, size_t crl_size,
 Result sslContextRemoveCrl_sfMitm(Service *s, u64 crl_id) {
     return serviceMitmDispatchIn(s, 11, crl_id);
 }
+
+Result sslContextImportClientCertKeyPki_sfMitm(Service *s, const void* cert, u32 cert_size,
+                             const void* key, u32 key_size, u32 format, u64 *id) {
+    return serviceMitmDispatchInOut(
+        s, 12, format, *id,
+        .buffer_attrs = {
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_In,
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_In,
+        },
+        .buffers = {
+            { cert, cert_size },
+            { key, key_size },
+        },
+    );
+}
+
+Result sslContextGeneratePrivateKeyAndCert_sfMitm(Service *s, void* cert, u32 cert_size,
+                void* key, u32 key_size, u32 val, const void* params,
+                u32 *out_certsize, u32 *out_keysize) {
+    struct {
+        u32 out_certsize;
+        u32 out_keysize;
+    } out;
+
+    Result rc = serviceMitmDispatchInOut(
+        s, 13, val, out,
+        .buffer_attrs = {
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_Out,
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_Out,
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_In,
+        },
+        .buffers = {
+            { cert, cert_size },
+            { key, key_size },
+            { params, sizeof(KeyAndCertParams_sf) },
+        },
+    );
+    if (R_SUCCEEDED(rc)) {
+        if (out_certsize) *out_certsize = out.out_certsize;
+        if (out_keysize) *out_keysize = out.out_keysize;
+    }
+    return rc;
+}
+
 
 Result sslConnectionSetSocketDescriptor_sfMitm(Service *s, u32 input_socket_fd,
                                                u32 *output_socket_fd) {
@@ -370,4 +430,78 @@ Result sslConnectionGetNextAlpnProto_sfMitm(Service *s, u32 *state,
     }
 
     return rc;
+}
+
+Result sslConnectionSetDtlsSocketDescriptor_sfMitm(Service *s, int sockfd,
+    const void* buf, size_t size, int *out_sockfd) {
+    return serviceMitmDispatchInOut(s, 28, sockfd, *out_sockfd,
+        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_In },
+        .buffers = {
+            { buf, size },
+        },
+    );
+}
+
+Result sslConnectionGetDtlsHandshakeTimeout_sfMitm(Service *s, void* out) {
+    return serviceMitmDispatch(s, 29,
+        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
+        .buffers = {
+            { out, sizeof(*out) },
+        },
+    );
+}
+
+Result sslConnectionSetPrivateOption_sfMitm(Service *s, u32 option, u32 value) {
+    if (hosversionBefore(17,0,0)) {
+        const struct {
+            u8 val0;
+            u8 pad[3];
+            u32 val1;
+        } in = { value!=0, {0}, option };
+    
+        return serviceMitmDispatchIn(s, 30, in);
+    }
+    else {
+        const struct {
+            u32 val0;
+            u32 val1;
+        } in = { option, value };
+        
+        return serviceMitmDispatchIn(s, 30, in);
+    }
+}
+
+Result sslConnectionSetSrtpCiphers_sfMitm(Service *s, const void* ciphers, u32 count) {
+    return serviceMitmDispatch(s, 31,
+        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_In },
+        .buffers = { { ciphers, count*sizeof(u16) } },
+    );
+}
+
+Result sslConnectionGetSrtpCipher_sfMitm(Service *s, u16 *out) {
+    return serviceMitmDispatchOut(s, 32, *out);
+}
+
+Result sslConnectionExportKeyingMaterial_sfMitm(Service *s, u8 *outbuf, u32 outbuf_size, 
+    const void* label, u32 label_size, const void* context, u32 context_size) {
+    return serviceMitmDispatch(s, 33,
+        .buffer_attrs = {
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_Out,
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_In,
+            SfBufferAttr_HipcMapAlias | SfBufferAttr_In,
+        },
+        .buffers = {
+            { outbuf, outbuf_size },
+            { label, label_size },
+            { context, context_size },
+        },
+    );
+}
+
+Result sslConnectionSetIoTimeout_sfMitm(Service *s, u32 timeout) {
+    return serviceMitmDispatchIn(s, 34, timeout);
+}
+
+Result sslConnectionGetIoTimeout_sfMitm(Service *s, u32 *out) {
+    return serviceMitmDispatchOut(s, 35, *out);
 }

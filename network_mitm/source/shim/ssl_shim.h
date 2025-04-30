@@ -14,11 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <switch/sf/service.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <switch/sf/service.h>
 
 typedef enum {
     AlpnProtoState_NoSupport_sf = 0,
@@ -164,8 +165,18 @@ typedef enum {
     VerifyOption_EvCertFingerprint_sf = 5,
 } VerifyOption_sf;
 
+typedef struct {
+    u32 unk;
+    s32 key_size;
+    u64 public_exponent;
+    char common_name[0x40];
+    u32 common_name_len;
+} KeyAndCertParams_sf;
+
 Result sslCreateContext_sfMitm(Service *s, u32 version, u64 pid_placeholder,
                                u64 client_pid, Service *out);
+Result sslCreateContextForSystem_sfMitm(Service *s, u32 version, u64 pid_placeholder,
+                                u64 client_pid, Service *out);
 Result sslGetContextCount_sfMitm(Service *s, u32 *count);
 Result sslGetCertificates_sfMitm(Service *s, const u32 *ids, size_t ids_size,
                                  u32 *certificates_count, void *certificates,
@@ -184,6 +195,7 @@ Result sslClearTls12FallbackFlag_sfMitm(Service *s);
 Result sslContextSetOption_sfMitm(Service *s, u32 option, u32 value);
 Result sslContextGetOption_sfMitm(Service *s, u32 option, u32 *value);
 Result sslContextCreateConnection_sfMitm(Service *s, Service *out);
+Result sslContextCreateConnectionEx_sfMitm(Service *s, Service *out);
 Result sslContextGetConnectionCount_sfMitm(Service *s, u32 *count);
 Result sslContextImportServerPki_sfMitm(Service *s, u32 certificateFormat,
                                         const void *certificate,
@@ -201,6 +213,11 @@ Result sslContextRegisterInternalPki_sfMitm(Service *s, u32 pki,
 Result sslContextAddPolicyOid_sfMitm(Service *s,
                                      const void *cert_policy_checking,
                                      size_t cert_policy_checking_size);
+Result sslContextImportClientCertKeyPki_sfMitm(Service *s, const void* cert, u32 cert_size,
+                                                const void* key, u32 key_size, u32 format, u64 *id);
+Result sslContextGeneratePrivateKeyAndCert_sfMitm(Service *s, void* cert, u32 cert_size,
+                            void* key, u32 key_size, u32 val, const void* params,
+                            u32 *out_certsize, u32 *out_keysize);
 Result sslContextImportCrl_sfMitm(Service *s, const void *crl, size_t crl_size,
                                   u64 *crl_id);
 Result sslContextRemoveCrl_sfMitm(Service *s, u64 crl_id);
@@ -250,6 +267,16 @@ Result sslConnectionGetNextAlpnProto_sfMitm(Service *s, u32 *state,
                                             u32 *alpn_proto_out_size,
                                             void *alpn_proto,
                                             size_t alpn_proto_size);
+Result sslConnectionSetDtlsSocketDescriptor_sfMitm(Service *s, int sockfd,
+                             const void* buf, size_t size, int *out_sockfd);
+Result sslConnectionGetDtlsHandshakeTimeout_sfMitm(Service *s, void* out);
+Result sslConnectionSetPrivateOption_sfMitm(Service *s, u32 option, u32 value);
+Result sslConnectionSetSrtpCiphers_sfMitm(Service *s, const void* ciphers, u32 count);
+Result sslConnectionGetSrtpCipher_sfMitm(Service *s, u16 *out);
+Result sslConnectionExportKeyingMaterial_sfMitm(Service *s, u8 *outbuf, u32 outbuf_size, 
+        const void* label, u32 label_size, const void* context, u32 context_size);
+Result sslConnectionSetIoTimeout_sfMitm(Service *s, u32 timeout);
+Result sslConnectionGetIoTimeout_sfMitm(Service *s, u32 *out);
 
 #ifdef __cplusplus
 }

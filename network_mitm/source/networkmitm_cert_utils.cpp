@@ -18,6 +18,8 @@
 #include <mbedtls/base64.h>
 
 namespace ams::ssl::sf::impl {
+extern Span<uint8_t> g_ca_certificate_public_key_der;
+
 bool ConvertPemToDer(Span<const uint8_t> pem_cert, Span<uint8_t> &der_cert,
                      size_t &der_cert_size) {
     const char *s1;
@@ -77,5 +79,80 @@ bool ConvertPemToDer(Span<const uint8_t> pem_cert, Span<uint8_t> &der_cert,
     der_cert_size = len;
 
     return true;
+}
+
+Result
+PatchCertificates(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
+                  ams::sf::Out<u32> certificates_count,
+                  const ams::sf::OutBuffer &certificates) {
+    if (g_ca_certificate_public_key_der.empty()) {
+        R_SUCCEED();
+    }
+
+    bool should_inject = false;
+
+    for (size_t i = 0; i < ids.GetSize(); i++) {
+        if (ids[i] == ams::ssl::sf::CaCertificateId::NintendoClass2CAG3 ||
+            ids[i] == ams::ssl::sf::CaCertificateId::All) {
+            should_inject = true;
+            break;
+        }
+    }
+
+    if (should_inject) {
+        const auto certificates_count_value = certificates_count.GetValue();
+
+        BuiltInCertificateInfo *infos =
+            reinterpret_cast<BuiltInCertificateInfo *>(
+                certificates.GetPointer());
+
+        u64 target_offset =
+            infos[certificates_count_value - 1].certificate_data_offset +
+            infos[certificates_count_value - 1].certificate_data_size;
+
+        memcpy(certificates.GetPointer() + target_offset,
+               g_ca_certificate_public_key_der.data(),
+               g_ca_certificate_public_key_der.size_bytes());
+
+        bool found_target_ca = false;
+
+        for (size_t i = 0; i < certificates_count_value; i++) {
+            if (infos[i].id ==
+                ams::ssl::sf::CaCertificateId::NintendoClass2CAG3) {
+                infos[i].certificate_data_offset = target_offset;
+                infos[i].certificate_data_size =
+                    g_ca_certificate_public_key_der.size_bytes();
+
+                found_target_ca = true;
+                break;
+            }
+        }
+
+        if (!found_target_ca) {
+            AMS_LOG("GetCertificates injection failed?! couldn't find the "
+                    "target CA in output!\n");
+        }
+    }
+    R_SUCCEED();
+}
+
+Result PatchCertificateBufSize(
+    const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
+    ams::sf::Out<u32> buffer_size) {
+    bool should_inject = false;
+
+    for (size_t i = 0; i < ids.GetSize(); i++) {
+        if (ids[i] == ams::ssl::sf::CaCertificateId::NintendoClass2CAG3 ||
+            ids[i] == ams::ssl::sf::CaCertificateId::All) {
+            should_inject = true;
+            break;
+        }
+    }
+
+    if (should_inject) {
+        buffer_size.SetValue(buffer_size.GetValue() +
+                             g_ca_certificate_public_key_der.size_bytes());
+    }
+    R_SUCCEED();
 }
 } // namespace ams::ssl::sf::impl

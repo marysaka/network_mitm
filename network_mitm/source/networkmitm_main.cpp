@@ -13,6 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+ #include "networkmitm_cert_utils.hpp"
+ #include "networkmitm_ssl_for_system_service_impl.hpp"
 #include "networkmitm_ssl_service_impl.hpp"
 #include <stratosphere.hpp>
 
@@ -214,17 +216,20 @@ const int CAKeyStorageSize = 0x1000;
 constinit u8 g_ca_public_key_storage_pem[CAKeyStorageSize];
 constinit u8 g_ca_public_key_storage_der[CAKeyStorageSize];
 Span<uint8_t> g_ca_certificate_public_key_pem;
-Span<uint8_t> g_ca_certificate_public_key_der;
+Span<uint8_t> g_ca_certificate_public_key_der = Span<uint8_t>();
 bool g_should_dump_ssl_traffic;
 bool g_should_mitm_all;
 PcapLinkType g_link_type;
 
 enum PortIndex {
     PortIndex_SslMitm,
+    PortIndex_SslSystemMitm,
     PortIndex_Count,
 };
 
 constexpr sm::ServiceName MitmSslServiceName = sm::ServiceName::Encode("ssl");
+constexpr sm::ServiceName MitmSslSystemServiceName =
+    sm::ServiceName::Encode("ssl:s");
 
 struct ServerOptions {
     // FIXME: Use real values from SSL after reverse
@@ -259,6 +264,17 @@ Result ServerManager::OnNeedsToAccept(int port_index, Server *server) {
         R_RETURN(this->AcceptMitmImpl(
             server,
             ams::sf::CreateSharedObjectEmplaced<ISslService, SslServiceImpl>(
+                decltype(forward_service)(forward_service), client_info,
+                g_should_dump_ssl_traffic, g_link_type,
+                g_ca_certificate_public_key_der),
+            forward_service));
+    case PortIndex_SslSystemMitm:
+        AMS_LOG("AcceptMitmImpl SSL SYSTEM titleid: %lx\n",
+                (u64)client_info.program_id);
+        R_RETURN(this->AcceptMitmImpl(
+            server,
+            ams::sf::CreateSharedObjectEmplaced<ISslServiceForSystem,
+                                                SslServiceForSystemImpl>(
                 decltype(forward_service)(forward_service), client_info,
                 g_should_dump_ssl_traffic, g_link_type,
                 g_ca_certificate_public_key_der),
@@ -337,8 +353,6 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
 void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all) {
     g_ca_certificate_public_key_pem = MakeSpan(
         g_ca_public_key_storage_pem, sizeof(g_ca_public_key_storage_pem));
-    g_ca_certificate_public_key_der = MakeSpan(
-        g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
     g_should_mitm_all = should_mitm_all;
     g_link_type = PcapLinkType::User;
@@ -378,8 +392,9 @@ void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all) {
                 MakeSpan(g_ca_public_key_storage_pem, out_size);
 
             size_t der_cert_size;
+            Span<uint8_t> temp_der = MakeSpan(g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
             if (!ConvertPemToDer(g_ca_certificate_public_key_pem,
-                                 g_ca_certificate_public_key_der,
+                                 temp_der,
                                  der_cert_size)) {
                 AMS_LOG("Cannot convert CA to DER!\n");
             } else {
@@ -433,6 +448,11 @@ void Main() {
     /* Create mitm servers. */
     R_ABORT_UNLESS((g_server_manager.RegisterMitmServer<SslServiceImpl>(
         PortIndex_SslMitm, MitmSslServiceName)));
+
+    if (hos::GetVersion() >= hos::Version_15_0_0) {
+        R_ABORT_UNLESS((g_server_manager.RegisterMitmServer<SslServiceImpl>(
+            PortIndex_SslSystemMitm, MitmSslSystemServiceName)));
+    }
 
     /* Loop forever, servicing our services. */
     AMS_LOG("Accepting requests.\n");

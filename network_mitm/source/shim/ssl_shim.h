@@ -183,6 +183,32 @@ Result sslSetDebugOption_sfMitm(Service *s, u32 option, const void *value,
 Result sslGetDebugOption_sfMitm(Service *s, u32 option, void *value,
                                 size_t value_size);
 Result sslClearTls12FallbackFlag_sfMitm(Service *s);
+Result sslsCreateContext_sfMitm(Service *s, u32 version, u64 pid_placeholder,
+                                u64 client_pid, Service *out);
+Result sslsGetContextCount_sfMitm(Service *s, u32 *count);
+Result sslsGetCertificates_sfMitm(Service *s, const u32 *ids, size_t ids_size,
+                                  u32 *certificates_count, void *certificates,
+                                  size_t certificates_size);
+Result sslsGetCertificateBufSize_sfMitm(Service *s, const u32 *ids,
+                                        size_t ids_size, u32 *buffer_size);
+Result sslsDebugIoctl_sfMitm(Service *s);
+Result sslsSetInterfaceVersion_sfMitm(Service *s, u32 version);
+Result sslsFlushSessionCache_sfMitm(Service *s, u32 option, const void *value,
+                                    size_t value_size);
+Result sslsSetDebugOption_sfMitm(Service *s, u32 option, const void *value,
+                                 size_t value_size);
+Result sslsGetDebugOption_sfMitm(Service *s, u32 option, void *value,
+                                 size_t value_size);
+Result sslsClearTls12FallbackFlag_sfMitm(Service *s);
+Result sslsCreateContextForSystem_sfMitm(Service *s, u32 version,
+                                         u64 pid_placeholder, u64 client_pid,
+                                         Service *out);
+Result sslsSetThreadCoreMask_sfMitm(Service *s, u64 mask);
+Result sslsGetThreadCoreMask_sfMitm(Service *s, u64 *mask);
+Result sslsVerifySignature_sfMitm(Service *s, u32 val, const void *unk1,
+                                  size_t unk1_size, const void *unk2,
+                                  size_t unk2_size, const void *unk3,
+                                  size_t unk3_size);
 Result sslContextSetOption_sfMitm(Service *s, u32 option, u32 value);
 Result sslContextGetOption_sfMitm(Service *s, u32 option, u32 *value);
 Result sslContextCreateConnection_sfMitm(Service *s, Service *out);
@@ -213,6 +239,41 @@ Result sslContextGeneratePrivateKeyAndCert_sfMitm(
     Service *s, u32 val, const void *params, size_t params_size, void *cert,
     size_t cert_size, void *key, size_t key_size, u32 *out_cert_size,
     u32 *out_key_size);
+Result sslContextForSystemSetOption_sfMitm(Service *s, u32 option, u32 value);
+Result sslContextForSystemGetOption_sfMitm(Service *s, u32 option, u32 *value);
+Result sslContextForSystemCreateConnection_sfMitm(Service *s, Service *out);
+Result sslContextForSystemGetConnectionCount_sfMitm(Service *s, u32 *count);
+Result sslContextForSystemImportServerPki_sfMitm(Service *s,
+                                                 u32 certificateFormat,
+                                                 const void *certificate,
+                                                 size_t certificate_size,
+                                                 u64 *certificate_id);
+Result sslContextForSystemImportClientPki_sfMitm(Service *s,
+                                                 const void *certificate,
+                                                 size_t certificate_size,
+                                                 const void *ascii_password,
+                                                 size_t ascii_password_size,
+                                                 u64 *certificate_id);
+Result sslContextForSystemRemoveServerPki_sfMitm(Service *s,
+                                                 u64 certificate_id);
+Result sslContextForSystemRemoveClientPki_sfMitm(Service *s,
+                                                 u64 certificate_id);
+Result sslContextForSystemRegisterInternalPki_sfMitm(Service *s, u32 pki,
+                                                     u64 *certificate_id);
+Result sslContextForSystemAddPolicyOid_sfMitm(Service *s,
+                                              const void *cert_policy_checking,
+                                              size_t cert_policy_checking_size);
+Result sslContextForSystemImportCrl_sfMitm(Service *s, const void *crl,
+                                           size_t crl_size, u64 *crl_id);
+Result sslContextForSystemRemoveCrl_sfMitm(Service *s, u64 crl_id);
+Result sslContextForSystemImportClientCertKeyPki_sfMitm(
+    Service *s, u32 certificateFormat, const void *cert, size_t cert_size,
+    const void *key, size_t key_size, u64 *certificate_id);
+Result sslContextForSystemGeneratePrivateKeyAndCert_sfMitm(
+    Service *s, u32 val, const void *params, size_t params_size, void *cert,
+    size_t cert_size, void *key, size_t key_size, u32 *out_cert_size,
+    u32 *out_key_size);
+Result sslContextForSystemCreateConnectionEx_sfMitm(Service *s, Service *out);
 Result sslConnectionSetSocketDescriptor_sfMitm(Service *s, u32 input_socket_fd,
                                                u32 *output_socket_fd);
 Result sslConnectionSetHostName_sfMitm(Service *s, const void *hostname,

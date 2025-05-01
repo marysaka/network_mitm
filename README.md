@@ -16,7 +16,7 @@ The following configuration should be added to `/atmosphere/config/system_settin
 [network_mitm]
 ; Enable SSL: This should be set to 1 for certificate swapping, and also for PCAP capturing.
 enable_ssl = u8!0x1
-; Uncomment this line to enable mitm of everything (including system titles in the future).
+; Uncomment this line to enable mitm of everything (including system titles).
 ; should_mitm_all = u8!0x1
 ; Root CA filename: this should be present in the root of the SD (sd:/rootCA.pem for the below example)
 custom_ca_public_cert = str!rootCA.pem

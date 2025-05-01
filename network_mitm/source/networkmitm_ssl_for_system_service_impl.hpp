@@ -17,39 +17,38 @@
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
 #include "networkmitm_ssl_context_impl.hpp"
+#include "networkmitm_ssl_context_for_system_impl.hpp"
 
-#define AMS_INTERFACE_ISSLSERVICE_INFO(C, H) \
+#define AMS_INTERFACE_ISSLSERVICEFORSYSTEM_INFO(C, H) \
     AMS_SF_METHOD_INFO(C, H, 0, Result, CreateContext, (const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out), (version, client_pid, out)) \
     AMS_SF_METHOD_INFO(C, H, 2, Result, GetCertificates, (const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> certificates_count, const ams::sf::OutBuffer &certificates), (ids, certificates_count, certificates)) \
-    AMS_SF_METHOD_INFO(C, H, 3, Result, GetCertificateBufSize, (const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> buffer_size), (ids, buffer_size)) \
+    AMS_SF_METHOD_INFO(C, H, 100, Result, CreateContextForSystem, (const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContextForSystem>> out), (version, client_pid, out)) \
 
-AMS_SF_DEFINE_MITM_INTERFACE(ams::ssl::sf, ISslService, AMS_INTERFACE_ISSLSERVICE_INFO, 0xE01918D)
+AMS_SF_DEFINE_MITM_INTERFACE(ams::ssl::sf, ISslServiceForSystem, AMS_INTERFACE_ISSLSERVICEFORSYSTEM_INFO, 0xA864049E)
 
 
 namespace ams::ssl::sf::impl {
     extern bool g_should_mitm_all;
 
-    class SslServiceImpl : ams::sf::MitmServiceImplBase {
+    class SslServiceForSystemImpl : ams::sf::MitmServiceImplBase {
         private:
             bool m_should_dump_traffic;
             PcapLinkType m_link_type;
             Span<uint8_t> m_ca_certificate_public_key_der;
         public:
-            SslServiceImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, bool should_dump_traffic, PcapLinkType link_type, Span<uint8_t> ca_certificate_public_key_der) : MitmServiceImplBase(std::move(s), c), m_should_dump_traffic(should_dump_traffic), m_link_type(link_type), m_ca_certificate_public_key_der(ca_certificate_public_key_der) { /* ... */ }
+            SslServiceForSystemImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, bool should_dump_traffic, PcapLinkType link_type, Span<uint8_t> ca_certificate_public_key_der) : MitmServiceImplBase(std::move(s), c), m_should_dump_traffic(should_dump_traffic), m_link_type(link_type), m_ca_certificate_public_key_der(ca_certificate_public_key_der) { /* ... */ }
 
             static bool ShouldMitm(const ams::sm::MitmProcessInfo &client_info) {
-                // AMS_LOG("ShouldMitm pid: %lx tid: %lx\n", (u64)client_info.process_id, (u64)client_info.program_id);
+                AMS_LOG("ShouldMitm SYSTEM pid: %lx tid: %lx\n", (u64)client_info.process_id, (u64)client_info.program_id);
 
-                if (g_should_mitm_all)
-                    return true;
-
-                return ncm::IsApplicationId(client_info.program_id);
+                return g_should_mitm_all;
             }
 
             Result CreateContext(const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out);
             Result GetCertificates(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> certificates_count, const ams::sf::OutBuffer &certificates);
             Result GetCertificateBufSize(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> buffer_size);
+            Result CreateContextForSystem(const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContextForSystem>> out);
     };
 
-    static_assert(ams::ssl::sf::IsISslService<ams::ssl::sf::impl::SslServiceImpl>);
+    static_assert(ams::ssl::sf::IsISslServiceForSystem<ams::ssl::sf::impl::SslServiceForSystemImpl>);
 }

@@ -14,12 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "networkmitm_cert_utils.hpp"
-#include "networkmitm_ssl_service_impl.hpp"
+#include "networkmitm_ssl_for_system_service_impl.hpp"
 #include "shim/ssl_shim.h"
 #include <stratosphere.hpp>
 
 namespace ams::ssl::sf::impl {
-Result SslServiceImpl::CreateContext(
+Result SslServiceForSystemImpl::CreateContext(
     const ams::ssl::sf::SslVersion &version,
     const ams::sf::ClientProcessId &client_pid,
     ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out) {
@@ -30,7 +30,7 @@ Result SslServiceImpl::CreateContext(
     }
 
     Service out_tmp;
-    R_TRY(sslCreateContext_sfMitm(
+    R_TRY(sslsCreateContext_sfMitm(
         m_forward_service.get(), static_cast<u32>(version),
         static_cast<u64>(client_pid.GetValue()),
         static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp)));
@@ -43,11 +43,11 @@ Result SslServiceImpl::CreateContext(
     R_SUCCEED();
 }
 
-Result SslServiceImpl::GetCertificates(
+Result SslServiceForSystemImpl::GetCertificates(
     const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
     ams::sf::Out<u32> certificates_count,
     const ams::sf::OutBuffer &certificates) {
-    R_TRY(sslGetCertificates_sfMitm(
+    R_TRY(sslsGetCertificates_sfMitm(
         m_forward_service.get(),
         reinterpret_cast<const u32 *>(ids.GetPointer()), ids.GetSize(),
         certificates_count.GetPointer(), certificates.GetPointer(),
@@ -58,15 +58,40 @@ Result SslServiceImpl::GetCertificates(
     R_SUCCEED();
 }
 
-Result SslServiceImpl::GetCertificateBufSize(
+Result SslServiceForSystemImpl::GetCertificateBufSize(
     const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
     ams::sf::Out<u32> buffer_size) {
-    R_TRY(sslGetCertificateBufSize_sfMitm(
+    R_TRY(sslsGetCertificateBufSize_sfMitm(
         m_forward_service.get(),
         reinterpret_cast<const u32 *>(ids.GetPointer()), ids.GetSize(),
         buffer_size.GetPointer()));
 
     R_TRY(PatchCertificateBufSize(ids, buffer_size));
+
+    R_SUCCEED();
+}
+
+Result SslServiceForSystemImpl::CreateContextForSystem(
+    const ams::ssl::sf::SslVersion &version,
+    const ams::sf::ClientProcessId &client_pid,
+    ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContextForSystem>>
+        out) {
+    // If we aren't mitm the traffic, we don't want to control the sub objects
+    // to reduce overhead.
+    if (!m_should_dump_traffic) {
+        return sm::mitm::ResultShouldForwardToSession();
+    }
+
+    Service out_tmp;
+    R_TRY(sslsCreateContextForSystem_sfMitm(
+        m_forward_service.get(), static_cast<u32>(version),
+        static_cast<u64>(client_pid.GetValue()),
+        static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp)));
+
+    out.SetValue(ams::sf::CreateSharedObjectEmplaced<ISslContextForSystem,
+                                                     SslContextForSystemImpl>(
+        std::make_shared<::Service>(out_tmp), m_client_info,
+        m_should_dump_traffic, m_link_type));
 
     R_SUCCEED();
 }

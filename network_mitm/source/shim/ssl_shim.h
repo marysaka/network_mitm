@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Mary <mary@mary.zone>
+ * Copyright (c) Mary Guillemard <mary@mary.zone>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,

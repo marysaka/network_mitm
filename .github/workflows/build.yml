@@ -31,8 +31,10 @@ jobs:
       - name: Uploading executable out directory
         uses: actions/upload-artifact@v4
         with:
-          name: network_mitm.zip
+          name: network_mitm_raw_output.zip
           path: network_mitm/out/*
+          if-no-files-found: error
+          compression-level: 9
 
       - name: Uploading release
         uses: actions/upload-artifact@v4
@@ -40,4 +42,4 @@ jobs:
           name: network_mitm.zip
           path: out/*.zip
           if-no-files-found: error
-          compression-level: 9
+          compression-level: 0

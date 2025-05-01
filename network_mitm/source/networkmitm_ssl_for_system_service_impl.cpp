@@ -23,9 +23,9 @@ Result SslServiceForSystemImpl::CreateContext(
     const ams::ssl::sf::SslVersion &version,
     const ams::sf::ClientProcessId &client_pid,
     ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out) {
-    // If we aren't mitm the traffic, we don't want to control the sub objects
-    // to reduce overhead.
-    if (!m_should_dump_traffic) {
+    // If we aren't mitm the traffic or disabling verifications, we don't want
+    // to control the sub objects to reduce overhead.
+    if (!m_should_dump_traffic && !g_should_disable_ssl_verification) {
         return sm::mitm::ResultShouldForwardToSession();
     }
 
@@ -80,9 +80,9 @@ Result SslServiceForSystemImpl::CreateContextForSystem(
     const ams::sf::ClientProcessId &client_pid,
     ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContextForSystem>>
         out) {
-    // If we aren't mitm the traffic, we don't want to control the sub objects
-    // to reduce overhead.
-    if (!m_should_dump_traffic) {
+    // If we aren't mitm the traffic or disabling verifications, we don't want
+    // to control the sub objects to reduce overhead.
+    if (!m_should_dump_traffic && !g_should_disable_ssl_verification) {
         return sm::mitm::ResultShouldForwardToSession();
     }
 

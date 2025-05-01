@@ -5,4 +5,4 @@ services:
     image: devkitpro/devkita64:latest
     volumes:
       - ".:/code"
-    command: bash -c "dkp-pacman -Syu --noconfirm && dkp-pacman -S switch-dev switch-mbedtls libnx --noconfirm && git clone https://github.com/Atmosphere-NX/libnx.git --branch 1600_support /tmp/libnx && cd /tmp/libnx && make install && cd /code && make"
+    command: bash -c "dkp-pacman -Syu --noconfirm && dkp-pacman -S switch-dev switch-mbedtls switch-libjpeg-turbo libnx --noconfirm && cd /code && make"

@@ -44,7 +44,8 @@ git submodule update --init --recursive
 1. Install [`devkitPro`](https://devkitpro.org/wiki/Getting_Started) and the following dependencies:
     - `switch-dev`
     - `switch-mbedtls`
-    - `libnx` (Currently needs [16.0.0](https://github.com/switchbrew/libnx/pull/603) patches)
+    - `switch-libjpeg-turbo`
+    - `libnx`
 
 2. Run `make` command.
 

@@ -13,8 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- #include "networkmitm_cert_utils.hpp"
- #include "networkmitm_ssl_for_system_service_impl.hpp"
+#include "networkmitm_cert_utils.hpp"
+#include "networkmitm_ssl_for_system_service_impl.hpp"
 #include "networkmitm_ssl_service_impl.hpp"
 #include <stratosphere.hpp>
 
@@ -246,7 +246,8 @@ class ServerManager final
     virtual Result OnNeedsToAccept(int port_index, Server *server) override;
 };
 
-ServerManager g_server_manager;
+ServerManager g_server_manager_for_user;
+ServerManager g_server_manager_for_system;
 
 Result ServerManager::OnNeedsToAccept(int port_index, Server *server) {
     AMS_LOG("OnNeedsToAccept\n");
@@ -292,20 +293,35 @@ alignas(os::MemoryPageSize) u8
 
 os::ThreadType g_extra_threads[NumExtraThreads];
 
-void LoopServerThread(void *) {
-    /* Loop forever, servicing our services. */
-    g_server_manager.LoopProcess();
+void LoopServerThreadForUser(void *) {
+    /* Loop forever, servicing our user service. */
+    g_server_manager_for_user.LoopProcess();
+}
+
+void LoopServerThreadForSystem(void *) {
+    /* Loop forever, servicing our system service. */
+    g_server_manager_for_system.LoopProcess();
 }
 
 void ProcessForServerOnAllThreads() {
+    bool has_system_manager = hos::GetVersion() >= hos::Version_15_0_0;
+
     /* Initialize threads. */
     if constexpr (NumExtraThreads > 0) {
         const s32 priority =
             os::GetThreadCurrentPriority(os::GetCurrentThread());
         for (size_t i = 0; i < NumExtraThreads; i++) {
-            R_ABORT_UNLESS(os::CreateThread(
-                g_extra_threads + i, LoopServerThread, nullptr,
-                g_extra_thread_stacks[i], ThreadStackSize, priority));
+            if (has_system_manager) {
+                R_ABORT_UNLESS(os::CreateThread(
+                    g_extra_threads + i,
+                    i % 2 ? LoopServerThreadForUser : LoopServerThreadForSystem,
+                    nullptr, g_extra_thread_stacks[i], ThreadStackSize,
+                    priority));
+            } else {
+                R_ABORT_UNLESS(os::CreateThread(
+                    g_extra_threads + i, LoopServerThreadForUser, nullptr,
+                    g_extra_thread_stacks[i], ThreadStackSize, priority));
+            }
         }
     }
 
@@ -317,7 +333,10 @@ void ProcessForServerOnAllThreads() {
     }
 
     /* Loop this thread. */
-    LoopServerThread(nullptr);
+    if (has_system_manager)
+        LoopServerThreadForSystem(nullptr);
+    else
+        LoopServerThreadForUser(nullptr);
 
     /* Wait for extra threads to finish. */
     if constexpr (NumExtraThreads > 0) {
@@ -392,9 +411,10 @@ void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all) {
                 MakeSpan(g_ca_public_key_storage_pem, out_size);
 
             size_t der_cert_size;
-            Span<uint8_t> temp_der = MakeSpan(g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
-            if (!ConvertPemToDer(g_ca_certificate_public_key_pem,
-                                 temp_der,
+            Span<uint8_t> temp_der =
+                MakeSpan(g_ca_public_key_storage_der,
+                         sizeof(g_ca_public_key_storage_der));
+            if (!ConvertPemToDer(g_ca_certificate_public_key_pem, temp_der,
                                  der_cert_size)) {
                 AMS_LOG("Cannot convert CA to DER!\n");
             } else {
@@ -446,12 +466,14 @@ void Main() {
     }
 
     /* Create mitm servers. */
-    R_ABORT_UNLESS((g_server_manager.RegisterMitmServer<SslServiceImpl>(
-        PortIndex_SslMitm, MitmSslServiceName)));
+    R_ABORT_UNLESS(
+        (g_server_manager_for_user.RegisterMitmServer<SslServiceImpl>(
+            PortIndex_SslMitm, MitmSslServiceName)));
 
     if (hos::GetVersion() >= hos::Version_15_0_0) {
-        R_ABORT_UNLESS((g_server_manager.RegisterMitmServer<SslServiceImpl>(
-            PortIndex_SslSystemMitm, MitmSslSystemServiceName)));
+        R_ABORT_UNLESS(
+            (g_server_manager_for_system.RegisterMitmServer<SslServiceImpl>(
+                PortIndex_SslSystemMitm, MitmSslSystemServiceName)));
     }
 
     /* Loop forever, servicing our services. */

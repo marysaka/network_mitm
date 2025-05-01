@@ -72,7 +72,7 @@ Result SslContextForSystemImpl::CreateConnection(
 
         if (R_FAILED(pcap_setup)) {
             AMS_LOG("PCAP file creation failed, capture will be disabled for "
-                    "this session!");
+                    "this session! (tid: %lx)\n", static_cast<u64>(m_client_info.program_id));
         }
     }
 
@@ -238,7 +238,7 @@ Result SslContextForSystemImpl::CreateConnectionEx(
 
         if (R_FAILED(pcap_setup)) {
             AMS_LOG("PCAP file creation failed, capture will be disabled for "
-                    "this session!");
+                    "this session! (tid: %lx)\n", static_cast<u64>(m_client_info.program_id));
         }
     }
 

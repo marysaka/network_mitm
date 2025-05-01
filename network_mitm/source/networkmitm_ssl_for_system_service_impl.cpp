@@ -13,8 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "networkmitm_cert_utils.hpp"
 #include "networkmitm_ssl_for_system_service_impl.hpp"
+#include "networkmitm_cert_utils.hpp"
 #include "shim/ssl_shim.h"
 #include <stratosphere.hpp>
 
@@ -35,10 +35,14 @@ Result SslServiceForSystemImpl::CreateContext(
         static_cast<u64>(client_pid.GetValue()),
         static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp)));
 
+    const ams::sf::cmif::DomainObjectId target_object_id{
+        serviceGetObjectId(std::addressof(out_tmp))};
+
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslContext, SslContextImpl>(
             std::make_shared<::Service>(out_tmp), m_client_info,
-            m_should_dump_traffic, m_link_type));
+            m_should_dump_traffic, m_link_type),
+        target_object_id);
 
     R_SUCCEED();
 }
@@ -88,10 +92,14 @@ Result SslServiceForSystemImpl::CreateContextForSystem(
         static_cast<u64>(client_pid.GetValue()),
         static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp)));
 
+    const ams::sf::cmif::DomainObjectId target_object_id{
+        serviceGetObjectId(std::addressof(out_tmp))};
+
     out.SetValue(ams::sf::CreateSharedObjectEmplaced<ISslContextForSystem,
                                                      SslContextForSystemImpl>(
-        std::make_shared<::Service>(out_tmp), m_client_info,
-        m_should_dump_traffic, m_link_type));
+                     std::make_shared<::Service>(out_tmp), m_client_info,
+                     m_should_dump_traffic, m_link_type),
+                 target_object_id);
 
     R_SUCCEED();
 }

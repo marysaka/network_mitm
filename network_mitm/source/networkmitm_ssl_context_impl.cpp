@@ -89,9 +89,13 @@ Result SslContextImpl::CreateConnection(
         }
     }
 
+    const ams::sf::cmif::DomainObjectId target_object_id{
+        serviceGetObjectId(std::addressof(out_tmp))};
+
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslConnection, SslConnectionImpl>(
-            std::make_shared<::Service>(out_tmp), m_client_info, writter));
+            std::make_shared<::Service>(out_tmp), m_client_info, writter),
+        target_object_id);
 
     R_SUCCEED();
 }

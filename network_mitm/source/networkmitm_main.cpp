@@ -200,12 +200,10 @@ bool ShouldDumpSslTraffic() {
 
 namespace ssl::sf::impl {
 const int CAKeyStorageSize = 0x1000;
-constinit u8 g_ca_private_key_storage[CAKeyStorageSize];
-constinit u8 g_ca_public_key_storage[CAKeyStorageSize];
+constinit u8 g_ca_public_key_storage_pem[CAKeyStorageSize];
 constinit u8 g_ca_public_key_storage_der[CAKeyStorageSize];
-Certificate g_ca_certificate;
+Span<uint8_t> g_ca_certificate_public_key_pem;
 Span<uint8_t> g_ca_certificate_public_key_der;
-bool g_ca_certificate_has_private_key;
 bool g_should_dump_ssl_traffic;
 PcapLinkType g_link_type;
 
@@ -325,12 +323,10 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
 }
 
 void Initialize(bool should_dump_ssl_traffic) {
-    g_ca_certificate = Certificate(
-        MakeSpan(g_ca_private_key_storage, sizeof(g_ca_private_key_storage)),
-        MakeSpan(g_ca_public_key_storage, sizeof(g_ca_public_key_storage)));
+    g_ca_certificate_public_key_pem = MakeSpan(
+        g_ca_public_key_storage_pem, sizeof(g_ca_public_key_storage_pem));
     g_ca_certificate_public_key_der = MakeSpan(
         g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
-    g_ca_certificate_has_private_key = false;
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
     g_link_type = PcapLinkType::User;
 
@@ -349,8 +345,6 @@ void Initialize(bool should_dump_ssl_traffic) {
         }
     }
 
-    bool should_fallback_to_cert_gen = false;
-
     char setting_path[ams::fs::EntryNameLengthMax + 1];
     char custom_cert_path[ams::fs::EntryNameLengthMax + 1];
     read_size = settings::fwdbg::GetSettingsItemValue(
@@ -365,68 +359,30 @@ void Initialize(bool should_dump_ssl_traffic) {
         size_t out_size;
 
         if (R_SUCCEEDED(ReadFileToBuffer(
-                custom_cert_path, g_ca_certificate.public_key.data(),
-                g_ca_certificate.public_key.size_bytes(), out_size))) {
-            g_ca_certificate.public_key =
-                MakeSpan(g_ca_certificate.public_key.data(), out_size);
+                custom_cert_path, g_ca_certificate_public_key_pem.data(),
+                g_ca_certificate_public_key_pem.size_bytes(), out_size))) {
+            g_ca_certificate_public_key_pem =
+                MakeSpan(g_ca_public_key_storage_pem, out_size);
 
-            read_size = settings::fwdbg::GetSettingsItemValue(
-                setting_path, sizeof(setting_path), "network_mitm",
-                "custom_ca_private_key");
-
-            if (read_size != 0) {
-                util::SNPrintf(
-                    custom_cert_path, sizeof(custom_cert_path), "%s:/%s",
-                    ams::fs::impl::SdCardFileSystemMountName, setting_path);
-                AMS_LOG("Attempting to load custom CA private key at %s\n",
-                        custom_cert_path);
-                if (R_SUCCEEDED(ReadFileToBuffer(
-                        custom_cert_path, g_ca_certificate.private_key.data(),
-                        g_ca_certificate.private_key.size_bytes(), out_size))) {
-                    g_ca_certificate.private_key =
-                        MakeSpan(g_ca_certificate.private_key.data(), out_size);
-                    g_ca_certificate_has_private_key = true;
-                } else {
-                    AMS_LOG("Failed to load custom CA private key at %s\n",
-                            custom_cert_path);
-                }
+            size_t der_cert_size;
+            if (!ConvertPemToDer(g_ca_certificate_public_key_pem,
+                                 g_ca_certificate_public_key_der,
+                                 der_cert_size)) {
+                AMS_LOG("Cannot convert CA to DER!\n");
             } else {
-                AMS_LOG("No custom CA private key provided, SSL certificate "
-                        "mitm will not be performed.\n");
-                AMS_LOG("To provide it, set \"custom_ca_private_key = "
-                        "str!my_ca.key\" in system_settings.ini\n");
-                AMS_LOG("MAKE SURE THERE IS NO PASSWORD SET\n");
-            }
-
-            if (!should_fallback_to_cert_gen) {
-                size_t der_cert_size;
-                if (!ConvertPemToDer(g_ca_certificate.public_key,
-                                     g_ca_certificate_public_key_der,
-                                     der_cert_size)) {
-                    AMS_LOG("Cannot convert CA to DER!\n");
-                    should_fallback_to_cert_gen = true;
-                    g_ca_certificate_has_private_key = false;
-                } else {
-                    g_ca_certificate_public_key_der = MakeSpan(
-                        g_ca_certificate_public_key_der.data(), der_cert_size);
-                }
+                g_ca_certificate_public_key_der = MakeSpan(
+                    g_ca_certificate_public_key_der.data(), der_cert_size);
+                AMS_LOG("Custom CA public cert at %s was loaded\n",
+                        custom_cert_path);
             }
         } else {
             AMS_LOG("Failed to load custom CA public cert at %s\n",
                     custom_cert_path);
-            should_fallback_to_cert_gen = true;
         }
-    }
-
-    if (should_fallback_to_cert_gen) {
+    } else {
         AMS_LOG("No custom CA provided.\n");
         AMS_LOG("To provide the public cert, set \"custom_ca_public_cert = "
                 "str!my_ca.pem\" in system_settings.ini\n");
-        AMS_LOG("To provide the private key, set \"custom_ca_private_key = "
-                "str!my_ca.key\" in system_settings.ini\n");
-        AMS_LOG("MAKE SURE THERE IS NO PASSWORD SET ON THE PRIVATE KEY\n");
-
-        g_ca_certificate_has_private_key = false;
     }
 }
 } // namespace ssl::sf::impl

@@ -13,9 +13,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "networkmitm_utils.hpp"
 #include "networkmitm_ssl_for_system_service_impl.hpp"
 #include "networkmitm_ssl_service_impl.hpp"
+#include "networkmitm_utils.hpp"
 #include <stratosphere.hpp>
 
 namespace ams {
@@ -381,7 +381,8 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
     R_SUCCEED();
 }
 
-void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all, bool should_disable_ssl_verification) {
+void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all,
+                bool should_disable_ssl_verification) {
     g_ca_certificate_public_key_pem = MakeSpan(
         g_ca_public_key_storage_pem, sizeof(g_ca_public_key_storage_pem));
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
@@ -431,8 +432,8 @@ void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all, bool should_
                                  der_cert_size)) {
                 AMS_LOG("Cannot convert CA to DER!\n");
             } else {
-                g_ca_certificate_public_key_der = MakeSpan(
-                    g_ca_certificate_public_key_der.data(), der_cert_size);
+                g_ca_certificate_public_key_der =
+                    MakeSpan(g_ca_public_key_storage_der, der_cert_size);
                 AMS_LOG("Custom CA public cert at %s was loaded\n",
                         custom_cert_path);
             }
@@ -469,7 +470,8 @@ void Main() {
     const bool should_dump_ssl_traffic = ShouldDumpSslTraffic();
     const bool should_mitm_all = ShouldMitmAll();
     const bool should_disable_ssl_verification = ShouldDisableSslVerification();
-    Initialize(should_dump_ssl_traffic, should_mitm_all, should_disable_ssl_verification);
+    Initialize(should_dump_ssl_traffic, should_mitm_all,
+               should_disable_ssl_verification);
 
     if (should_mitm_all) {
         AMS_LOG("MITM enabled on all users\n");

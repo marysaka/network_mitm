@@ -372,4 +372,104 @@ Result SslConnectionImpl::GetNextAlpnProto(
     R_SUCCEED();
 }
 
+Result
+SslConnectionImpl::SetDtlsSocketDescriptor(u32 sock_fd,
+                                           const ams::sf::InBuffer &sock_addr,
+                                           ams::sf::Out<u32> out_sock_fd) {
+    Result res = sslConnectionSetDtlsSocketDescriptor_sfMitm(
+        m_forward_service.get(), sock_fd, sock_addr.GetPointer(),
+        sock_addr.GetSize(), out_sock_fd.GetPointer());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::GetDtlsHandshakeTimeout(const ams::sf::OutBuffer &timespan) {
+    Result res = sslConnectionGetDtlsHandshakeTimeout_sfMitm(
+        m_forward_service.get(), timespan.GetPointer(), timespan.GetSize());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::SetPrivateOption(const ams::ssl::sf::OptionType &option,
+                                    u32 value) {
+    Result res = sslConnectionSetPrivateOption_sfMitm(
+        m_forward_service.get(), static_cast<u32>(option), value);
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result SslConnectionImpl::SetSrtpCiphers(const ams::sf::InBuffer &ciphers) {
+    Result res = sslConnectionSetSrtpCiphers_sfMitm(
+        m_forward_service.get(), ciphers.GetPointer(), ciphers.GetSize());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result SslConnectionImpl::GetSrtpCipher(ams::sf::Out<u16> cipher) {
+    Result res = sslConnectionGetSrtpCipher_sfMitm(m_forward_service.get(),
+                                                   cipher.GetPointer());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::ExportKeyingMaterial(const ams::sf::InBuffer &label,
+                                        const ams::sf::InBuffer &context,
+                                        const ams::sf::OutBuffer &material) {
+    Result res = sslConnectionExportKeyingMaterial_sfMitm(
+        m_forward_service.get(), label.GetPointer(), label.GetSize(),
+        context.GetPointer(), context.GetSize(), material.GetPointer(),
+        material.GetSize());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result SslConnectionImpl::SetIoTimeout(u32 timeout) {
+    Result res =
+        sslConnectionSetIoTimeout_sfMitm(m_forward_service.get(), timeout);
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result SslConnectionImpl::GetIoTimeout(ams::sf::Out<u32> timeout) {
+    Result res = sslConnectionGetIoTimeout_sfMitm(m_forward_service.get(),
+                                                  timeout.GetPointer());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
 } // namespace ams::ssl::sf::impl

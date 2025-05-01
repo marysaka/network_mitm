@@ -49,7 +49,15 @@ using namespace ams::ssl::mitm::pcap;
     AMS_SF_METHOD_INFO(C, H, 24, Result, GetVerifyCertErrors, (ams::sf::Out<u32> unk0, ams::sf::Out<u32> unk1, const ams::sf::OutBuffer &unk2), (unk0, unk1, unk2)) \
     AMS_SF_METHOD_INFO(C, H, 25, Result, GetCipherInfo, (u32 unk0, const ams::sf::OutBuffer &cipher_info), (unk0, cipher_info), hos::Version_4_0_0) \
     AMS_SF_METHOD_INFO(C, H, 26, Result, SetNextAlpnProto, (const ams::sf::InBuffer &alpn_proto), (alpn_proto), hos::Version_9_0_0) \
-    AMS_SF_METHOD_INFO(C, H, 27, Result, GetNextAlpnProto, (ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto), (state, alpn_proto_out_size, alpn_proto), hos::Version_9_0_0)
+    AMS_SF_METHOD_INFO(C, H, 27, Result, GetNextAlpnProto, (ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto), (state, alpn_proto_out_size, alpn_proto), hos::Version_9_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 28, Result, SetDtlsSocketDescriptor, (u32 sock_fd, const ams::sf::InBuffer &sock_addr, ams::sf::Out<u32> out_sock_fd), (sock_fd, sock_addr, out_sock_fd), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 29, Result, GetDtlsHandshakeTimeout, (const ams::sf::OutBuffer &timespan), (timespan), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 30, Result, SetPrivateOption, (const ams::ssl::sf::OptionType &option, u32 value), (option, value), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 31, Result, SetSrtpCiphers, (const ams::sf::InBuffer &ciphers), (ciphers), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 32, Result, GetSrtpCipher, (ams::sf::Out<u16> cipher), (cipher), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 33, Result, ExportKeyingMaterial, (const ams::sf::InBuffer &label, const ams::sf::InBuffer &context, const ams::sf::OutBuffer &material), (label, context, material), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 34, Result, SetIoTimeout, (u32 timeout), (timeout), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 35, Result, GetIoTimeout, (ams::sf::Out<u32> timeout), (timeout), hos::Version_16_0_0)
 
 AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslConnection, AMS_INTERFACE_ISSLCONNECTION_INFO, 0xA9B8D9AA)
 
@@ -96,6 +104,14 @@ namespace ams::ssl::sf::impl {
             Result GetCipherInfo(u32 unk0, const ams::sf::OutBuffer &cipher_info);
             Result SetNextAlpnProto(const ams::sf::InBuffer &alpn_proto);
             Result GetNextAlpnProto(ams::sf::Out<ams::ssl::sf::AlpnProtoState> state, ams::sf::Out<u32> alpn_proto_out_size, const ams::sf::OutBuffer &alpn_proto);
+            Result SetDtlsSocketDescriptor(u32 sock_fd, const ams::sf::InBuffer &sock_addr, ams::sf::Out<u32> out_sock_fd);
+            Result GetDtlsHandshakeTimeout(const ams::sf::OutBuffer &timespan);
+            Result SetPrivateOption(const ams::ssl::sf::OptionType &option, u32 value);
+            Result SetSrtpCiphers(const ams::sf::InBuffer &ciphers);
+            Result GetSrtpCipher(ams::sf::Out<u16> cipher);
+            Result ExportKeyingMaterial(const ams::sf::InBuffer &label, const ams::sf::InBuffer &context, const ams::sf::OutBuffer &material);
+            Result SetIoTimeout(u32 timeout);
+            Result GetIoTimeout(ams::sf::Out<u32> timeout);
     };
 
     static_assert(ams::ssl::sf::IsISslConnection<ams::ssl::sf::impl::SslConnectionImpl>);

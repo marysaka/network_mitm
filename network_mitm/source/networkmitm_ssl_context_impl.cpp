@@ -220,4 +220,36 @@ Result SslContextImpl::RemoveCrl(u64 crl_id) {
     R_SUCCEED();
 }
 
+Result SslContextImpl::ImportClientCertKeyPki(
+    const ams::ssl::sf::CertificateFormat &certificateFormat,
+    const ams::sf::InBuffer &cert, const ams::sf::InBuffer &key,
+    ams::sf::Out<u64> certificate_id) {
+    Result res = sslContextImportClientCertKeyPki_sfMitm(
+        m_forward_service.get(), static_cast<u32>(certificateFormat),
+        cert.GetPointer(), cert.GetSize(), key.GetPointer(), key.GetSize(),
+        certificate_id.GetPointer());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
+Result SslContextImpl::GeneratePrivateKeyAndCert(
+    u32 val, const ams::sf::InBuffer &params, const ams::sf::OutBuffer &cert,
+    const ams::sf::OutBuffer &key, ams::sf::Out<u32> out_cert_size,
+    ams::sf::Out<u32> out_key_size) {
+    Result res = sslContextGeneratePrivateKeyAndCert_sfMitm(
+        m_forward_service.get(), val, params.GetPointer(), params.GetSize(),
+        cert.GetPointer(), cert.GetSize(), key.GetPointer(), key.GetSize(),
+        out_cert_size.GetPointer(), out_key_size.GetPointer());
+
+    if (res.IsFailure()) {
+        return res;
+    }
+
+    R_SUCCEED();
+}
+
 } // namespace ams::ssl::sf::impl

@@ -30,7 +30,9 @@
     AMS_SF_METHOD_INFO(C, H, 8, Result, RegisterInternalPki, (const ams::ssl::sf::InternalPki &pki, ams::sf::Out<u64> certificate_id), (pki, certificate_id)) \
     AMS_SF_METHOD_INFO(C, H, 9, Result, AddPolicyOid, (const ams::sf::InBuffer &cert_policy_checking), (cert_policy_checking)) \
     AMS_SF_METHOD_INFO(C, H, 10, Result, ImportCrl, (const ams::sf::InBuffer &crl, ams::sf::Out<u64> crl_id), (crl, crl_id), hos::Version_3_0_0) \
-    AMS_SF_METHOD_INFO(C, H, 11, Result, RemoveCrl, (u64 crl_id), (crl_id), hos::Version_3_0_0)
+    AMS_SF_METHOD_INFO(C, H, 11, Result, RemoveCrl, (u64 crl_id), (crl_id), hos::Version_3_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 12, Result, ImportClientCertKeyPki, (const ams::ssl::sf::CertificateFormat &certificateFormat, const ams::sf::InBuffer &cert, const ams::sf::InBuffer &key, ams::sf::Out<u64> certificate_id), (certificateFormat, cert, key, certificate_id), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 13, Result, GeneratePrivateKeyAndCert, (u32 val, const ams::sf::InBuffer &params, const ams::sf::OutBuffer &cert, const ams::sf::OutBuffer &key, ams::sf::Out<u32> out_cert_size, ams::sf::Out<u32> out_key_size), (val, params, cert, key, out_cert_size, out_key_size), hos::Version_16_0_0)
 
 AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslContext, AMS_INTERFACE_ISSLCONTEXT_INFO, 0x46DF8B0C)
 
@@ -57,6 +59,8 @@ namespace ams::ssl::sf::impl {
             Result AddPolicyOid(const ams::sf::InBuffer &cert_policy_checking);
             Result ImportCrl(const ams::sf::InBuffer &crl, ams::sf::Out<u64> crl_id);
             Result RemoveCrl(u64 crl_id);
+            Result ImportClientCertKeyPki(const ams::ssl::sf::CertificateFormat &certificateFormat, const ams::sf::InBuffer &cert, const ams::sf::InBuffer &key, ams::sf::Out<u64> certificate_id);
+            Result GeneratePrivateKeyAndCert(u32 val, const ams::sf::InBuffer &params, const ams::sf::OutBuffer &cert, const ams::sf::OutBuffer &key, ams::sf::Out<u32> out_cert_size, ams::sf::Out<u32> out_key_size);
     };
 
     static_assert(ams::ssl::sf::IsISslContext<ams::ssl::sf::impl::SslContextImpl>);

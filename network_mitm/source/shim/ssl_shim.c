@@ -162,6 +162,42 @@ Result sslContextRemoveCrl_sfMitm(Service *s, u64 crl_id) {
     return serviceMitmDispatchIn(s, 11, crl_id);
 }
 
+Result sslContextImportClientCertKeyPki_sfMitm(
+    Service *s, u32 certificateFormat, const void *cert, size_t cert_size,
+    const void *key, size_t key_size, u64 *certificate_id) {
+    return serviceMitmDispatchInOut(
+        s, 12, certificateFormat, *certificate_id,
+        .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias,
+                         SfBufferAttr_In | SfBufferAttr_HipcMapAlias},
+        .buffers = {{cert, cert_size}, {key, key_size}});
+}
+
+Result sslContextGeneratePrivateKeyAndCert_sfMitm(
+    Service *s, u32 val, const void *params, size_t params_size, void *cert,
+    size_t cert_size, void *key, size_t key_size, u32 *out_cert_size,
+    u32 *out_key_size) {
+    struct {
+        u32 out_cert_size;
+        u32 out_key_size;
+    } out;
+
+    Result rc = serviceMitmDispatchInOut(
+        s, 13, val, out,
+        .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias,
+                         SfBufferAttr_Out | SfBufferAttr_HipcMapAlias,
+                         SfBufferAttr_Out | SfBufferAttr_HipcMapAlias},
+        .buffers = {{params, params_size}, {cert, cert_size}, {key, key_size}});
+
+    if (R_SUCCEEDED(rc)) {
+        if (out_cert_size)
+            *out_cert_size = out.out_cert_size;
+        if (out_key_size)
+            *out_key_size = out.out_key_size;
+    }
+
+    return rc;
+}
+
 Result sslConnectionSetSocketDescriptor_sfMitm(Service *s, u32 input_socket_fd,
                                                u32 *output_socket_fd) {
     return serviceMitmDispatchInOut(s, 0, input_socket_fd, *output_socket_fd);
@@ -370,4 +406,62 @@ Result sslConnectionGetNextAlpnProto_sfMitm(Service *s, u32 *state,
     }
 
     return rc;
+}
+
+Result sslConnectionSetDtlsSocketDescriptor_sfMitm(Service *s, u32 sock_fd,
+                                                   const void *sock_addr,
+                                                   size_t sock_addr_size,
+                                                   u32 *out_sock_fd) {
+    return serviceMitmDispatchInOut(
+        s, 28, sock_fd, *out_sock_fd,
+        .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias},
+        .buffers = {{sock_addr, sock_addr_size}});
+}
+
+Result sslConnectionGetDtlsHandshakeTimeout_sfMitm(Service *s, void *timespan,
+                                                   size_t timespan_size) {
+    return serviceMitmDispatch(
+        s, 29, .buffer_attrs = {SfBufferAttr_Out | SfBufferAttr_HipcMapAlias},
+        .buffers = {{timespan, timespan_size}});
+}
+
+Result sslConnectionSetPrivateOption_sfMitm(Service *s, u32 option, u32 value) {
+    const struct {
+        u32 option;
+        u32 value;
+    } in = {option, value};
+
+    return serviceMitmDispatchIn(s, 30, in);
+}
+
+Result sslConnectionSetSrtpCiphers_sfMitm(Service *s, const void *ciphers,
+                                          size_t ciphers_size) {
+    return serviceMitmDispatch(
+        s, 31, .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias},
+        .buffers = {{ciphers, ciphers_size}});
+}
+
+Result sslConnectionGetSrtpCipher_sfMitm(Service *s, u16 *cipher) {
+    return serviceMitmDispatchOut(s, 32, *cipher);
+}
+
+Result sslConnectionExportKeyingMaterial_sfMitm(
+    Service *s, const void *label, size_t label_size, const void *context,
+    size_t context_size, void *material, size_t material_size) {
+    return serviceMitmDispatch(
+        s, 33,
+        .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias,
+                         SfBufferAttr_In | SfBufferAttr_HipcMapAlias,
+                         SfBufferAttr_Out | SfBufferAttr_HipcMapAlias},
+        .buffers = {{label, label_size},
+                    {context, context_size},
+                    {material, material_size}});
+}
+
+Result sslConnectionSetIoTimeout_sfMitm(Service *s, u32 timeout) {
+    return serviceMitmDispatchIn(s, 34, timeout);
+}
+
+Result sslConnectionGetIoTimeout_sfMitm(Service *s, u32 *timeout) {
+    return serviceMitmDispatchOut(s, 35, *timeout);
 }

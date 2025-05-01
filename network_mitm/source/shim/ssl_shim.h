@@ -76,21 +76,23 @@ typedef enum {
     CaCertificateId_AmazonRootCA3_sf = 1040,
     CaCertificateId_AmazonRootCA4_sf = 1041,
     CaCertificateId_DigiCertAssuredIDRootG3_sf = 1042,
-    CaCertificateId_DigiCertGlobalRootG3_sf = 1042,
-    CaCertificateId_DigiCertTrustedRootG4_sf = 1043,
-    CaCertificateId_EntrustRootCertificationAuthorityEC1_sf = 1044,
-    CaCertificateId_EntrustRootCertificationAuthorityG4_sf = 1045,
-    CaCertificateId_GlobalSignECCRootCAR4_sf = 1046,
-    CaCertificateId_GlobalSignECCRootCAR5_sf = 1047,
-    CaCertificateId_GlobalSignECCRootCAR6_sf = 1048,
-    CaCertificateId_GTSRootR1_sf = 1049,
-    CaCertificateId_GTSRootR2_sf = 1050,
-    CaCertificateId_GTSRootR3_sf = 1051,
-    CaCertificateId_GTSRootR4_sf = 1052,
-    CaCertificateId_SecurityCommunicationRootCA_sf = 1053,
-    CaCertificateId_DigiCertTLSECCP384RootG5 = 1054,
-    CaCertificateId_DigiCertTLSRSA4096RootG5 = 1055,
-    CaCertificateId_NintendoTempRootCAG4 = 65536,
+    CaCertificateId_DigiCertGlobalRootG3_sf = 1043,
+    CaCertificateId_DigiCertTrustedRootG4_sf = 1044,
+    CaCertificateId_EntrustRootCertificationAuthorityEC1_sf = 1045,
+    CaCertificateId_EntrustRootCertificationAuthorityG4_sf = 1046,
+    CaCertificateId_GlobalSignECCRootCAR4_sf = 1047,
+    CaCertificateId_GlobalSignECCRootCAR5_sf = 1048,
+    CaCertificateId_GlobalSignECCRootCAR6_sf = 1049,
+    CaCertificateId_GTSRootR1_sf = 1050,
+    CaCertificateId_GTSRootR2_sf = 1051,
+    CaCertificateId_GTSRootR3_sf = 1052,
+    CaCertificateId_GTSRootR4_sf = 1053,
+    CaCertificateId_SecurityCommunicationRootCA_sf = 1054,
+    CaCertificateId_GlobalSignRootE4_sf = 1055,
+    CaCertificateId_GlobalSignRootE4_2_sf = 1056,
+    CaCertificateId_TTeleSecGlobalRootClass2_sf = 1057,
+    CaCertificateId_DigiCertTLSECCP384RootG5_sf = 1058,
+    CaCertificateId_DigiCertTLSRSA4096RootG5_sf = 1059,
     CaCertificateId_All_sf = 4294967295,
 } CaCertificateId_sf;
 
@@ -204,6 +206,13 @@ Result sslContextAddPolicyOid_sfMitm(Service *s,
 Result sslContextImportCrl_sfMitm(Service *s, const void *crl, size_t crl_size,
                                   u64 *crl_id);
 Result sslContextRemoveCrl_sfMitm(Service *s, u64 crl_id);
+Result sslContextImportClientCertKeyPki_sfMitm(
+    Service *s, u32 certificateFormat, const void *cert, size_t cert_size,
+    const void *key, size_t key_size, u64 *certificate_id);
+Result sslContextGeneratePrivateKeyAndCert_sfMitm(
+    Service *s, u32 val, const void *params, size_t params_size, void *cert,
+    size_t cert_size, void *key, size_t key_size, u32 *out_cert_size,
+    u32 *out_key_size);
 Result sslConnectionSetSocketDescriptor_sfMitm(Service *s, u32 input_socket_fd,
                                                u32 *output_socket_fd);
 Result sslConnectionSetHostName_sfMitm(Service *s, const void *hostname,
@@ -250,6 +259,21 @@ Result sslConnectionGetNextAlpnProto_sfMitm(Service *s, u32 *state,
                                             u32 *alpn_proto_out_size,
                                             void *alpn_proto,
                                             size_t alpn_proto_size);
+Result sslConnectionSetDtlsSocketDescriptor_sfMitm(Service *s, u32 sock_fd,
+                                                   const void *sock_addr,
+                                                   size_t sock_addr_size,
+                                                   u32 *out_sock_fd);
+Result sslConnectionGetDtlsHandshakeTimeout_sfMitm(Service *s, void *timespan,
+                                                   size_t timespan_size);
+Result sslConnectionSetPrivateOption_sfMitm(Service *s, u32 option, u32 value);
+Result sslConnectionSetSrtpCiphers_sfMitm(Service *s, const void *ciphers,
+                                          size_t ciphers_size);
+Result sslConnectionGetSrtpCipher_sfMitm(Service *s, u16 *cipher);
+Result sslConnectionExportKeyingMaterial_sfMitm(
+    Service *s, const void *label, size_t label_size, const void *context,
+    size_t context_size, void *material, size_t material_size);
+Result sslConnectionSetIoTimeout_sfMitm(Service *s, u32 timeout);
+Result sslConnectionGetIoTimeout_sfMitm(Service *s, u32 *timeout);
 
 #ifdef __cplusplus
 }

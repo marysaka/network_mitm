@@ -42,13 +42,6 @@ Result SslServiceImpl::CreateContext(
     R_SUCCEED();
 }
 
-Result SslServiceImpl::GetContextCount(ams::sf::Out<u32> count) {
-    R_TRY(
-        sslGetContextCount_sfMitm(m_forward_service.get(), count.GetPointer()));
-
-    R_SUCCEED();
-}
-
 Result SslServiceImpl::GetCertificates(
     const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
     ams::sf::Out<u32> certificates_count,
@@ -129,54 +122,6 @@ Result SslServiceImpl::GetCertificateBufSize(
         buffer_size.SetValue(buffer_size.GetValue() +
                              m_ca_certificate_public_key_der.size_bytes());
     }
-
-    R_SUCCEED();
-}
-
-Result SslServiceImpl::DebugIoctl() {
-    R_TRY(sslDebugIoctl_sfMitm(m_forward_service.get()));
-
-    R_SUCCEED();
-}
-
-Result SslServiceImpl::SetInterfaceVersion(u32 version) {
-    R_TRY(sslSetInterfaceVersion_sfMitm(m_forward_service.get(), version));
-
-    R_SUCCEED();
-}
-
-Result SslServiceImpl::FlushSessionCache(
-    const ams::ssl::sf::FlushSessionCacheOptionType &option,
-    const ams::sf::InBuffer &value) {
-    R_TRY(sslFlushSessionCache_sfMitm(m_forward_service.get(),
-                                      static_cast<u32>(option),
-                                      value.GetPointer(), value.GetSize()));
-
-    R_SUCCEED();
-}
-
-Result
-SslServiceImpl::SetDebugOption(const ams::ssl::sf::DebugOptionType &option,
-                               const ams::sf::InBuffer &value) {
-    R_TRY(sslSetDebugOption_sfMitm(m_forward_service.get(),
-                                   static_cast<u32>(option), value.GetPointer(),
-                                   value.GetSize()));
-
-    R_SUCCEED();
-}
-
-Result
-SslServiceImpl::GetDebugOption(const ams::ssl::sf::DebugOptionType &option,
-                               const ams::sf::OutBuffer &value) {
-    R_TRY(sslGetDebugOption_sfMitm(m_forward_service.get(),
-                                   static_cast<u32>(option), value.GetPointer(),
-                                   value.GetSize()));
-
-    R_SUCCEED();
-}
-
-Result SslServiceImpl::ClearTls12FallbackFlag() {
-    R_TRY(sslClearTls12FallbackFlag_sfMitm(m_forward_service.get()));
 
     R_SUCCEED();
 }

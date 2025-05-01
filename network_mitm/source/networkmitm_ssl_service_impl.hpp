@@ -64,15 +64,8 @@ namespace ams::ssl::sf::impl {
             }
 
             Result CreateContext(const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out);
-            Result GetContextCount(ams::sf::Out<u32> count);
             Result GetCertificates(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> certificates_count, const ams::sf::OutBuffer &certificates);
             Result GetCertificateBufSize(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids, ams::sf::Out<u32> buffer_size);
-            Result DebugIoctl();
-            Result SetInterfaceVersion(u32 version);
-            Result FlushSessionCache(const ams::ssl::sf::FlushSessionCacheOptionType &option, const ams::sf::InBuffer &value);
-            Result SetDebugOption(const ams::ssl::sf::DebugOptionType &option, const ams::sf::InBuffer &value);
-            Result GetDebugOption(const ams::ssl::sf::DebugOptionType &option, const ams::sf::OutBuffer &value);
-            Result ClearTls12FallbackFlag();
     };
 
     static_assert(ams::ssl::sf::IsISslService<ams::ssl::sf::impl::SslServiceImpl>);

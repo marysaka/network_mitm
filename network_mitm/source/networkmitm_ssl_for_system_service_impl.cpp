@@ -40,7 +40,7 @@ Result SslServiceForSystemImpl::CreateContext(
 
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslContext, SslContextImpl>(
-            std::make_shared<::Service>(out_tmp), m_client_info,
+            std::make_unique<::Service>(out_tmp), m_client_info,
             m_should_dump_traffic, m_link_type),
         target_object_id);
 
@@ -97,7 +97,7 @@ Result SslServiceForSystemImpl::CreateContextForSystem(
 
     out.SetValue(ams::sf::CreateSharedObjectEmplaced<ISslContextForSystem,
                                                      SslContextForSystemImpl>(
-                     std::make_shared<::Service>(out_tmp), m_client_info,
+                     std::make_unique<::Service>(out_tmp), m_client_info,
                      m_should_dump_traffic, m_link_type),
                  target_object_id);
 

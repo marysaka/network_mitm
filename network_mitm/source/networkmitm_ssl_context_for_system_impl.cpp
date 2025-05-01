@@ -81,7 +81,7 @@ Result SslContextForSystemImpl::CreateConnection(
 
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslConnection, SslConnectionImpl>(
-            std::make_shared<::Service>(out_tmp), m_client_info, writter),
+            std::make_unique<::Service>(out_tmp), m_client_info, writter),
         target_object_id);
 
     R_SUCCEED();
@@ -247,7 +247,7 @@ Result SslContextForSystemImpl::CreateConnectionEx(
 
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslConnection, SslConnectionImpl>(
-            std::make_shared<::Service>(out_tmp), m_client_info, writter),
+            std::make_unique<::Service>(out_tmp), m_client_info, writter),
         target_object_id);
 
     R_SUCCEED();

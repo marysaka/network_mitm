@@ -67,13 +67,13 @@ AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslConnection, AMS_INTERFACE_ISSLCONNECTI
 namespace ams::ssl::sf::impl {
     class SslConnectionImpl {
         protected:
-            std::shared_ptr<::Service> m_forward_service;
+            std::unique_ptr<::Service> m_forward_service;
             sm::MitmProcessInfo m_client_info;
             PcapFileWriter *m_writer;
             ams::ssl::sf::VerifyOption m_requested_option = (ams::ssl::sf::VerifyOption)3;
             bool m_requested_default_verify;
         public:
-            SslConnectionImpl(std::shared_ptr<::Service> &&s,
+            SslConnectionImpl(std::unique_ptr<::Service> &&s,
                             const sm::MitmProcessInfo &c, PcapFileWriter *writter)
                 : m_forward_service(std::move(s)), m_client_info(c), m_writer(writter) {
                 if (g_should_disable_ssl_verification) {
@@ -95,6 +95,8 @@ namespace ams::ssl::sf::impl {
                 if (m_writer != nullptr) {
                     delete m_writer;
                 }
+
+                serviceClose(m_forward_service.get());
             }
 
             Result SetSocketDescriptor(u32 input_socket_fd, ams::sf::Out<u32> output_socket_fd);

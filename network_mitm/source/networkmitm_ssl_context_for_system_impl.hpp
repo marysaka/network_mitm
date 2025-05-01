@@ -26,12 +26,13 @@ AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslContextForSystem, AMS_INTERFACE_ISSLCO
 namespace ams::ssl::sf::impl {
     class SslContextForSystemImpl {
         protected:
-            std::shared_ptr<::Service> m_forward_service;
+            std::unique_ptr<::Service> m_forward_service;
             sm::MitmProcessInfo m_client_info;
             bool m_should_dump_traffic;
             PcapLinkType m_link_type;
         public:
-            SslContextForSystemImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, bool should_dump_traffic, PcapLinkType link_type) : m_forward_service(std::move(s)), m_client_info(c), m_should_dump_traffic(should_dump_traffic), m_link_type(link_type) { /* ... */ }
+            SslContextForSystemImpl(std::unique_ptr<::Service> &&s, const sm::MitmProcessInfo &c, bool should_dump_traffic, PcapLinkType link_type) : m_forward_service(std::move(s)), m_client_info(c), m_should_dump_traffic(should_dump_traffic), m_link_type(link_type) { /* ... */ }
+            ~SslContextForSystemImpl() { serviceClose(m_forward_service.get()); }
 
             Result SetOption(const ams::ssl::sf::OptionType &option, u32 value);
             Result GetOption(const ams::ssl::sf::OptionType &option, ams::sf::Out<u32> value);

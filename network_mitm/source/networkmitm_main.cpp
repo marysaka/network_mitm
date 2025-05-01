@@ -198,6 +198,17 @@ bool ShouldDumpSslTraffic() {
     return true;
 }
 
+bool ShouldMitmAll() {
+    u8 en = 0;
+    if (settings::fwdbg::GetSettingsItemValue(
+            std::addressof(en), sizeof(en), "network_mitm",
+            "should_mitm_all") == sizeof(en)) {
+        return (en != 0);
+    }
+
+    return false;
+}
+
 namespace ssl::sf::impl {
 const int CAKeyStorageSize = 0x1000;
 constinit u8 g_ca_public_key_storage_pem[CAKeyStorageSize];
@@ -205,6 +216,7 @@ constinit u8 g_ca_public_key_storage_der[CAKeyStorageSize];
 Span<uint8_t> g_ca_certificate_public_key_pem;
 Span<uint8_t> g_ca_certificate_public_key_der;
 bool g_should_dump_ssl_traffic;
+bool g_should_mitm_all;
 PcapLinkType g_link_type;
 
 enum PortIndex {
@@ -322,12 +334,13 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
     R_SUCCEED();
 }
 
-void Initialize(bool should_dump_ssl_traffic) {
+void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all) {
     g_ca_certificate_public_key_pem = MakeSpan(
         g_ca_public_key_storage_pem, sizeof(g_ca_public_key_storage_pem));
     g_ca_certificate_public_key_der = MakeSpan(
         g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
+    g_should_mitm_all = should_mitm_all;
     g_link_type = PcapLinkType::User;
 
     char pcap_link_type[16];
@@ -406,7 +419,12 @@ void Main() {
 
     AMS_LOG("network_mitm enabled\n");
     const bool should_dump_ssl_traffic = ShouldDumpSslTraffic();
-    Initialize(should_dump_ssl_traffic);
+    const bool should_mitm_all = ShouldMitmAll();
+    Initialize(should_dump_ssl_traffic, should_mitm_all);
+
+    if (should_mitm_all) {
+        AMS_LOG("MITM enabled on all users\n");
+    }
 
     if (!should_dump_ssl_traffic) {
         AMS_LOG("SSL service traffic dumping disabled\n");

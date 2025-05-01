@@ -28,6 +28,8 @@ AMS_SF_DEFINE_MITM_INTERFACE(ams::ssl::sf, ISslService, AMS_INTERFACE_ISSLSERVIC
 
 
 namespace ams::ssl::sf::impl {
+    extern bool g_should_mitm_all;
+
     enum class TrustedCertStatus : u32 {
         Removed,
         EnabledTrusted,
@@ -50,17 +52,13 @@ namespace ams::ssl::sf::impl {
         public:
             SslServiceImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, bool should_dump_traffic, PcapLinkType link_type, Span<uint8_t> ca_certificate_public_key_der) : MitmServiceImplBase(std::move(s), c), m_should_dump_traffic(should_dump_traffic), m_link_type(link_type), m_ca_certificate_public_key_der(ca_certificate_public_key_der) { /* ... */ }
 
-            static bool ShouldMitmImpl(const ams::sm::MitmProcessInfo &client_info) {
-                // TODO: Allow a user configureable list
-                return (ncm::IsApplicationId(client_info.program_id)); //|| client_info.override_status.IsHbl());
-            }
-
             static bool ShouldMitm(const ams::sm::MitmProcessInfo &client_info) {
-                bool should_mitm = ShouldMitmImpl(client_info);
+                // AMS_LOG("ShouldMitm pid: %lx tid: %lx\n", (u64)client_info.process_id, (u64)client_info.program_id);
 
-                // AMS_LOG("ShouldMitm pid: %lx tid: %lx (should_mitm: %d)\n", (u64)client_info.process_id, (u64)client_info.program_id, should_mitm);
+                if (g_should_mitm_all)
+                    return true;
 
-                return should_mitm;
+                return ncm::IsApplicationId(client_info.program_id);
             }
 
             Result CreateContext(const ams::ssl::sf::SslVersion &version, const ams::sf::ClientProcessId &client_pid, ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslContext>> out);

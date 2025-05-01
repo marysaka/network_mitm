@@ -29,14 +29,10 @@ Result SslServiceImpl::CreateContext(
     }
 
     Service out_tmp;
-    Result res = sslCreateContext_sfMitm(
+    R_TRY(sslCreateContext_sfMitm(
         m_forward_service.get(), static_cast<u32>(version),
         static_cast<u64>(client_pid.GetValue()),
-        static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp));
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        static_cast<u64>(client_pid.GetValue()), std::addressof(out_tmp)));
 
     out.SetValue(
         ams::sf::CreateSharedObjectEmplaced<ISslContext, SslContextImpl>(
@@ -47,12 +43,8 @@ Result SslServiceImpl::CreateContext(
 }
 
 Result SslServiceImpl::GetContextCount(ams::sf::Out<u32> count) {
-    Result res =
-        sslGetContextCount_sfMitm(m_forward_service.get(), count.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(
+        sslGetContextCount_sfMitm(m_forward_service.get(), count.GetPointer()));
 
     R_SUCCEED();
 }
@@ -61,15 +53,11 @@ Result SslServiceImpl::GetCertificates(
     const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
     ams::sf::Out<u32> certificates_count,
     const ams::sf::OutBuffer &certificates) {
-    Result res = sslGetCertificates_sfMitm(
+    R_TRY(sslGetCertificates_sfMitm(
         m_forward_service.get(),
         reinterpret_cast<const u32 *>(ids.GetPointer()), ids.GetSize(),
         certificates_count.GetPointer(), certificates.GetPointer(),
-        certificates.GetSize());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        certificates.GetSize()));
 
     bool should_inject = false;
 
@@ -122,14 +110,10 @@ Result SslServiceImpl::GetCertificates(
 Result SslServiceImpl::GetCertificateBufSize(
     const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
     ams::sf::Out<u32> buffer_size) {
-    Result res = sslGetCertificateBufSize_sfMitm(
+    R_TRY(sslGetCertificateBufSize_sfMitm(
         m_forward_service.get(),
         reinterpret_cast<const u32 *>(ids.GetPointer()), ids.GetSize(),
-        buffer_size.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        buffer_size.GetPointer()));
 
     bool should_inject = false;
 
@@ -150,22 +134,13 @@ Result SslServiceImpl::GetCertificateBufSize(
 }
 
 Result SslServiceImpl::DebugIoctl() {
-    Result res = sslDebugIoctl_sfMitm(m_forward_service.get());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslDebugIoctl_sfMitm(m_forward_service.get()));
 
     R_SUCCEED();
 }
 
 Result SslServiceImpl::SetInterfaceVersion(u32 version) {
-    Result res =
-        sslSetInterfaceVersion_sfMitm(m_forward_service.get(), version);
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslSetInterfaceVersion_sfMitm(m_forward_service.get(), version));
 
     R_SUCCEED();
 }
@@ -173,13 +148,9 @@ Result SslServiceImpl::SetInterfaceVersion(u32 version) {
 Result SslServiceImpl::FlushSessionCache(
     const ams::ssl::sf::FlushSessionCacheOptionType &option,
     const ams::sf::InBuffer &value) {
-    Result res = sslFlushSessionCache_sfMitm(
-        m_forward_service.get(), static_cast<u32>(option), value.GetPointer(),
-        value.GetSize());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslFlushSessionCache_sfMitm(m_forward_service.get(),
+                                      static_cast<u32>(option),
+                                      value.GetPointer(), value.GetSize()));
 
     R_SUCCEED();
 }
@@ -187,13 +158,9 @@ Result SslServiceImpl::FlushSessionCache(
 Result
 SslServiceImpl::SetDebugOption(const ams::ssl::sf::DebugOptionType &option,
                                const ams::sf::InBuffer &value) {
-    Result res = sslSetDebugOption_sfMitm(m_forward_service.get(),
-                                          static_cast<u32>(option),
-                                          value.GetPointer(), value.GetSize());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslSetDebugOption_sfMitm(m_forward_service.get(),
+                                   static_cast<u32>(option), value.GetPointer(),
+                                   value.GetSize()));
 
     R_SUCCEED();
 }
@@ -201,23 +168,15 @@ SslServiceImpl::SetDebugOption(const ams::ssl::sf::DebugOptionType &option,
 Result
 SslServiceImpl::GetDebugOption(const ams::ssl::sf::DebugOptionType &option,
                                const ams::sf::OutBuffer &value) {
-    Result res = sslGetDebugOption_sfMitm(m_forward_service.get(),
-                                          static_cast<u32>(option),
-                                          value.GetPointer(), value.GetSize());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslGetDebugOption_sfMitm(m_forward_service.get(),
+                                   static_cast<u32>(option), value.GetPointer(),
+                                   value.GetSize()));
 
     R_SUCCEED();
 }
 
 Result SslServiceImpl::ClearTls12FallbackFlag() {
-    Result res = sslClearTls12FallbackFlag_sfMitm(m_forward_service.get());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslClearTls12FallbackFlag_sfMitm(m_forward_service.get()));
 
     R_SUCCEED();
 }

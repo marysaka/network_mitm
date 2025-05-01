@@ -20,24 +20,16 @@
 namespace ams::ssl::sf::impl {
 Result SslContextImpl::SetOption(const ams::ssl::sf::OptionType &option,
                                  u32 value) {
-    Result res = sslContextSetOption_sfMitm(m_forward_service.get(),
-                                            static_cast<u32>(option), value);
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextSetOption_sfMitm(m_forward_service.get(),
+                                     static_cast<u32>(option), value));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::GetOption(const ams::ssl::sf::OptionType &option,
                                  ams::sf::Out<u32> value) {
-    Result res = sslContextGetOption_sfMitm(
-        m_forward_service.get(), static_cast<u32>(option), value.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextGetOption_sfMitm(
+        m_forward_service.get(), static_cast<u32>(option), value.GetPointer()));
 
     R_SUCCEED();
 }
@@ -45,12 +37,8 @@ Result SslContextImpl::GetOption(const ams::ssl::sf::OptionType &option,
 Result SslContextImpl::CreateConnection(
     ams::sf::Out<ams::sf::SharedPointer<ams::ssl::sf::ISslConnection>> out) {
     Service out_tmp;
-    Result res = sslContextCreateConnection_sfMitm(m_forward_service.get(),
-                                                   std::addressof(out_tmp));
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextCreateConnection_sfMitm(m_forward_service.get(),
+                                            std::addressof(out_tmp)));
 
     PcapFileWriter *writter = nullptr;
 
@@ -109,12 +97,8 @@ Result SslContextImpl::CreateConnection(
 }
 
 Result SslContextImpl::GetConnectionCount(ams::sf::Out<u32> count) {
-    Result res = sslContextGetConnectionCount_sfMitm(m_forward_service.get(),
-                                                     count.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextGetConnectionCount_sfMitm(m_forward_service.get(),
+                                              count.GetPointer()));
 
     R_SUCCEED();
 }
@@ -122,14 +106,10 @@ Result SslContextImpl::GetConnectionCount(ams::sf::Out<u32> count) {
 Result SslContextImpl::ImportServerPki(
     const ams::ssl::sf::CertificateFormat &certificateFormat,
     const ams::sf::InBuffer &certificate, ams::sf::Out<u64> certificate_id) {
-    Result res = sslContextImportServerPki_sfMitm(
+    R_TRY(sslContextImportServerPki_sfMitm(
         m_forward_service.get(), static_cast<u32>(certificateFormat),
         certificate.GetPointer(), certificate.GetSize(),
-        certificate_id.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        certificate_id.GetPointer()));
 
     R_SUCCEED();
 }
@@ -137,85 +117,56 @@ Result SslContextImpl::ImportServerPki(
 Result SslContextImpl::ImportClientPki(const ams::sf::InBuffer &certificate,
                                        const ams::sf::InBuffer &ascii_password,
                                        ams::sf::Out<u64> certificate_id) {
-    Result res = sslContextImportClientPki_sfMitm(
+    R_TRY(sslContextImportClientPki_sfMitm(
         m_forward_service.get(), certificate.GetPointer(),
         certificate.GetSize(), ascii_password.GetPointer(),
-        ascii_password.GetSize(), certificate_id.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        ascii_password.GetSize(), certificate_id.GetPointer()));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::RemoveServerPki(u64 certificate_id) {
-    Result res = sslContextRemoveServerPki_sfMitm(m_forward_service.get(),
-                                                  certificate_id);
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextRemoveServerPki_sfMitm(m_forward_service.get(),
+                                           certificate_id));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::RemoveClientPki(u64 certificate_id) {
-    Result res = sslContextRemoveClientPki_sfMitm(m_forward_service.get(),
-                                                  certificate_id);
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextRemoveClientPki_sfMitm(m_forward_service.get(),
+                                           certificate_id));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::RegisterInternalPki(const ams::ssl::sf::InternalPki &pki,
                                            ams::sf::Out<u64> certificate_id) {
-    Result res = sslContextRegisterInternalPki_sfMitm(
-        m_forward_service.get(), static_cast<u32>(pki),
-        certificate_id.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextRegisterInternalPki_sfMitm(m_forward_service.get(),
+                                               static_cast<u32>(pki),
+                                               certificate_id.GetPointer()));
 
     R_SUCCEED();
 }
 
 Result
 SslContextImpl::AddPolicyOid(const ams::sf::InBuffer &cert_policy_checking) {
-    Result res = sslContextAddPolicyOid_sfMitm(
-        m_forward_service.get(), cert_policy_checking.GetPointer(),
-        cert_policy_checking.GetSize());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextAddPolicyOid_sfMitm(m_forward_service.get(),
+                                        cert_policy_checking.GetPointer(),
+                                        cert_policy_checking.GetSize()));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::ImportCrl(const ams::sf::InBuffer &crl,
                                  ams::sf::Out<u64> crl_id) {
-    Result res =
-        sslContextImportCrl_sfMitm(m_forward_service.get(), crl.GetPointer(),
-                                   crl.GetSize(), crl_id.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextImportCrl_sfMitm(m_forward_service.get(), crl.GetPointer(),
+                                     crl.GetSize(), crl_id.GetPointer()));
 
     R_SUCCEED();
 }
 
 Result SslContextImpl::RemoveCrl(u64 crl_id) {
-    Result res = sslContextRemoveCrl_sfMitm(m_forward_service.get(), crl_id);
-
-    if (res.IsFailure()) {
-        return res;
-    }
+    R_TRY(sslContextRemoveCrl_sfMitm(m_forward_service.get(), crl_id));
 
     R_SUCCEED();
 }
@@ -224,14 +175,10 @@ Result SslContextImpl::ImportClientCertKeyPki(
     const ams::ssl::sf::CertificateFormat &certificateFormat,
     const ams::sf::InBuffer &cert, const ams::sf::InBuffer &key,
     ams::sf::Out<u64> certificate_id) {
-    Result res = sslContextImportClientCertKeyPki_sfMitm(
+    R_TRY(sslContextImportClientCertKeyPki_sfMitm(
         m_forward_service.get(), static_cast<u32>(certificateFormat),
         cert.GetPointer(), cert.GetSize(), key.GetPointer(), key.GetSize(),
-        certificate_id.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        certificate_id.GetPointer()));
 
     R_SUCCEED();
 }
@@ -240,14 +187,10 @@ Result SslContextImpl::GeneratePrivateKeyAndCert(
     u32 val, const ams::sf::InBuffer &params, const ams::sf::OutBuffer &cert,
     const ams::sf::OutBuffer &key, ams::sf::Out<u32> out_cert_size,
     ams::sf::Out<u32> out_key_size) {
-    Result res = sslContextGeneratePrivateKeyAndCert_sfMitm(
+    R_TRY(sslContextGeneratePrivateKeyAndCert_sfMitm(
         m_forward_service.get(), val, params.GetPointer(), params.GetSize(),
         cert.GetPointer(), cert.GetSize(), key.GetPointer(), key.GetSize(),
-        out_cert_size.GetPointer(), out_key_size.GetPointer());
-
-    if (res.IsFailure()) {
-        return res;
-    }
+        out_cert_size.GetPointer(), out_key_size.GetPointer()));
 
     R_SUCCEED();
 }

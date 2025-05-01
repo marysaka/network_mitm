@@ -148,8 +148,8 @@ Result SslConnectionImpl::Read(ams::sf::Out<u32> read_count,
         return res;
     }
 
-    if (m_writter != nullptr) {
-        m_writter->Write(PcapDirection::Input, buffer.GetPointer(),
+    if (m_writer != nullptr) {
+        m_writer->Write(PcapDirection::Input, buffer.GetPointer(),
                          read_count.GetValue());
     }
 
@@ -166,8 +166,8 @@ Result SslConnectionImpl::Write(const ams::sf::InBuffer &buffer,
         return res;
     }
 
-    if (m_writter != nullptr) {
-        m_writter->Write(PcapDirection::Output, buffer.GetPointer(),
+    if (m_writer != nullptr) {
+        m_writer->Write(PcapDirection::Output, buffer.GetPointer(),
                          write_count.GetValue());
     }
 

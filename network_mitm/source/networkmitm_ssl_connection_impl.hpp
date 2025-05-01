@@ -16,7 +16,7 @@
 #pragma once
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
-#include "impl/pcap/pcap_file_writter.hpp"
+#include "impl/pcap/pcap_file_writer.hpp"
 #include "impl/pcap/pcap_utils.hpp"
 
 using namespace ams::ssl::mitm::pcap;
@@ -67,12 +67,12 @@ namespace ams::ssl::sf::impl {
         protected:
             std::shared_ptr<::Service> m_forward_service;
             sm::MitmProcessInfo m_client_info;
-            PcapFileWriter *m_writter;
+            PcapFileWriter *m_writer;
         public:
-            SslConnectionImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, PcapFileWriter *writter) : m_forward_service(std::move(s)), m_client_info(c), m_writter(writter) { }
+            SslConnectionImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, PcapFileWriter *writter) : m_forward_service(std::move(s)), m_client_info(c), m_writer(writter) { }
             ~SslConnectionImpl() {
-                if (m_writter != nullptr) {
-                    delete m_writter;
+                if (m_writer != nullptr) {
+                    delete m_writer;
                 }
             }
 

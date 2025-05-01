@@ -18,6 +18,8 @@ The following configuration should be added to `/atmosphere/config/system_settin
 enable_ssl = u8!0x1
 ; Uncomment this line to enable mitm of everything (including system titles).
 ; should_mitm_all = u8!0x1
+; Uncomment this line to disable SSL verifications (DANGEROUS)
+; should_disable_ssl_verification = u8!0x1
 ; Root CA filename: this should be present in the root of the SD (sd:/rootCA.pem for the below example)
 custom_ca_public_cert = str!rootCA.pem
 ; By default, the sysmodule will dump decrypted network traffic user-link PCAPs to the SD card only for the main application.

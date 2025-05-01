@@ -15,6 +15,7 @@
  */
 #pragma once
 #include <stratosphere.hpp>
+#include "networkmitm_utils.hpp"
 #include "networkmitm_ssl_types.hpp"
 #include "networkmitm_ssl_context_impl.hpp"
 
@@ -27,8 +28,6 @@ AMS_SF_DEFINE_MITM_INTERFACE(ams::ssl::sf, ISslService, AMS_INTERFACE_ISSLSERVIC
 
 
 namespace ams::ssl::sf::impl {
-    extern bool g_should_mitm_all;
-
     class SslServiceImpl : ams::sf::MitmServiceImplBase {
         private:
             bool m_should_dump_traffic;

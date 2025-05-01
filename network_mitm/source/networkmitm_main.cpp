@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "networkmitm_cert_utils.hpp"
+#include "networkmitm_utils.hpp"
 #include "networkmitm_ssl_for_system_service_impl.hpp"
 #include "networkmitm_ssl_service_impl.hpp"
 #include <stratosphere.hpp>
@@ -211,6 +211,17 @@ bool ShouldMitmAll() {
     return false;
 }
 
+bool ShouldDisableSslVerification() {
+    u8 en = 0;
+    if (settings::fwdbg::GetSettingsItemValue(
+            std::addressof(en), sizeof(en), "network_mitm",
+            "should_disable_ssl_verification") == sizeof(en)) {
+        return (en != 0);
+    }
+
+    return false;
+}
+
 namespace ssl::sf::impl {
 const int CAKeyStorageSize = 0x1000;
 constinit u8 g_ca_public_key_storage_pem[CAKeyStorageSize];
@@ -219,6 +230,7 @@ Span<uint8_t> g_ca_certificate_public_key_pem;
 Span<uint8_t> g_ca_certificate_public_key_der = Span<uint8_t>();
 bool g_should_dump_ssl_traffic;
 bool g_should_mitm_all;
+bool g_should_disable_ssl_verification;
 PcapLinkType g_link_type;
 
 enum PortIndex {
@@ -369,11 +381,12 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
     R_SUCCEED();
 }
 
-void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all) {
+void Initialize(bool should_dump_ssl_traffic, bool should_mitm_all, bool should_disable_ssl_verification) {
     g_ca_certificate_public_key_pem = MakeSpan(
         g_ca_public_key_storage_pem, sizeof(g_ca_public_key_storage_pem));
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
     g_should_mitm_all = should_mitm_all;
+    g_should_disable_ssl_verification = should_disable_ssl_verification;
     g_link_type = PcapLinkType::User;
 
     char pcap_link_type[16];
@@ -455,10 +468,15 @@ void Main() {
     AMS_LOG("network_mitm enabled\n");
     const bool should_dump_ssl_traffic = ShouldDumpSslTraffic();
     const bool should_mitm_all = ShouldMitmAll();
-    Initialize(should_dump_ssl_traffic, should_mitm_all);
+    const bool should_disable_ssl_verification = ShouldDisableSslVerification();
+    Initialize(should_dump_ssl_traffic, should_mitm_all, should_disable_ssl_verification);
 
     if (should_mitm_all) {
         AMS_LOG("MITM enabled on all users\n");
+    }
+
+    if (should_disable_ssl_verification) {
+        AMS_LOG("SSL verification will be forcefully disabled\n");
     }
 
     if (!should_dump_ssl_traffic) {

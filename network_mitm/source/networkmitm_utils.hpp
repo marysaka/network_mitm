@@ -18,6 +18,9 @@
 #include "networkmitm_ssl_types.hpp"
 
 namespace ams::ssl::sf::impl {
+    extern bool g_should_mitm_all;
+    extern bool g_should_disable_ssl_verification;
+
     bool ConvertPemToDer(Span<const uint8_t> pem_cert, Span<uint8_t> &der_cert, size_t &der_cert_size);
 
     enum class TrustedCertStatus : u32 {

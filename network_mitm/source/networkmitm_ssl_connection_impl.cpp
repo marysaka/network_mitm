@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "networkmitm_ssl_connection_impl.hpp"
+#include "networkmitm_utils.hpp"
 #include "shim/ssl_shim.h"
 #include <stratosphere.hpp>
 
@@ -35,12 +36,22 @@ Result SslConnectionImpl::SetHostName(const ams::sf::InBuffer &hostname) {
     R_SUCCEED();
 }
 
-Result
-SslConnectionImpl::SetVerifyOption(const ams::ssl::sf::VerifyOption &option) {
+Result SslConnectionImpl::SetVerifyOptionReal(
+    const ams::ssl::sf::VerifyOption &option) {
     R_TRY(sslConnectionSetVerifyOption_sfMitm(m_forward_service.get(),
                                               static_cast<u32>(option)));
 
     R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::SetVerifyOption(const ams::ssl::sf::VerifyOption &option) {
+    if (g_should_disable_ssl_verification) {
+        m_requested_option = option;
+        R_SUCCEED();
+    }
+
+    return SetVerifyOptionReal(option);
 }
 
 Result SslConnectionImpl::SetIoMode(const ams::ssl::sf::IoMode &mode) {
@@ -68,8 +79,12 @@ Result SslConnectionImpl::GetHostName(ams::sf::Out<u32> hostname_length,
 
 Result SslConnectionImpl::GetVerifyOption(
     ams::sf::Out<ams::ssl::sf::VerifyOption> option) {
-    R_TRY(sslConnectionGetVerifyOption_sfMitm(
-        m_forward_service.get(), reinterpret_cast<u32 *>(option.GetPointer())));
+    ams::ssl::sf::VerifyOption returned_value;
+    R_TRY(sslConnectionGetVerifyOption_sfMitm(m_forward_service.get(),
+                                              (u32 *)&returned_value));
+
+    option.SetValue(g_should_disable_ssl_verification ? m_requested_option
+                                                      : returned_value);
 
     R_SUCCEED();
 }
@@ -204,18 +219,47 @@ Result SslConnectionImpl::GetRenegotiationMode(
     R_SUCCEED();
 }
 
-Result SslConnectionImpl::SetOption(bool value,
-                                    const ams::ssl::sf::OptionType &option) {
+Result
+SslConnectionImpl::SetOptionReal(bool value,
+                                 const ams::ssl::sf::OptionType &option) {
     R_TRY(sslConnectionSetOption_sfMitm(m_forward_service.get(), value,
                                         static_cast<u32>(option)));
 
     R_SUCCEED();
 }
 
-Result SslConnectionImpl::GetOption(const ams::ssl::sf::OptionType &value,
-                                    ams::sf::Out<bool> option) {
+Result SslConnectionImpl::SetOption(bool value,
+                                    const ams::ssl::sf::OptionType &option) {
+    if (g_should_disable_ssl_verification &&
+        option == ams::ssl::sf::OptionType::SkipDefaultVerify) {
+        m_requested_default_verify = value;
+        value =
+            true; // force SkipDefaultVerify on, even when requested disabled
+    }
+
+    return SetOptionReal(value, option);
+}
+
+Result SslConnectionImpl::GetOptionReal(const ams::ssl::sf::OptionType &value,
+                                        ams::sf::Out<bool> option) {
     R_TRY(sslConnectionGetOption_sfMitm(
         m_forward_service.get(), static_cast<u32>(value), option.GetPointer()));
+
+    R_SUCCEED();
+}
+
+Result SslConnectionImpl::GetOption(const ams::ssl::sf::OptionType &value,
+                                    ams::sf::Out<bool> option) {
+    bool returned_value;
+    R_TRY(sslConnectionGetOption_sfMitm(
+        m_forward_service.get(), static_cast<u32>(value), &returned_value));
+
+    if (g_should_disable_ssl_verification &&
+        value == ams::ssl::sf::OptionType::SkipDefaultVerify) {
+        option.SetValue(m_requested_default_verify);
+    } else {
+        option.SetValue(returned_value);
+    }
 
     R_SUCCEED();
 }
@@ -279,13 +323,21 @@ SslConnectionImpl::GetDtlsHandshakeTimeout(const ams::sf::OutBuffer &timespan) {
     R_SUCCEED();
 }
 
-Result
-SslConnectionImpl::SetPrivateOption(const ams::ssl::sf::OptionType &option,
-                                    u32 value) {
-    R_TRY(sslConnectionSetPrivateOption_sfMitm(
-        m_forward_service.get(), static_cast<u32>(option), value));
+Result SslConnectionImpl::SetPrivateOptionReal(
+    const ams::ssl::sf::OptionType &option, u32 value) {
+    return sslConnectionSetPrivateOption_sfMitm(m_forward_service.get(), value,
+                                                static_cast<u32>(option));
+}
 
-    R_SUCCEED();
+Result
+SslConnectionImpl::SetPrivateOption(const ams::ssl::sf::OptionType &option, u32 value) {
+    if (g_should_disable_ssl_verification &&
+        option == ams::ssl::sf::OptionType::SkipDefaultVerify) {
+        m_requested_default_verify = value;
+        value = 1; // force SkipDefaultVerify on, even when requested disabled
+    }
+
+    return SetPrivateOptionReal(option, value);
 }
 
 Result SslConnectionImpl::SetSrtpCiphers(const ams::sf::InBuffer &ciphers) {

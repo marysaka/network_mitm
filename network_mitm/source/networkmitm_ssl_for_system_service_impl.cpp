@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "networkmitm_ssl_for_system_service_impl.hpp"
-#include "networkmitm_cert_utils.hpp"
+#include "networkmitm_utils.hpp"
 #include "shim/ssl_shim.h"
 #include <stratosphere.hpp>
 

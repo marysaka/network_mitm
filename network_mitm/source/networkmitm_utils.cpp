@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "networkmitm_cert_utils.hpp"
+#include "networkmitm_utils.hpp"
 #include <mbedtls/base64.h>
 
 namespace ams::ssl::sf::impl {

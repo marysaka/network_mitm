@@ -16,6 +16,8 @@
 #pragma once
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
+#include "networkmitm_ssl_types.hpp"
+#include "networkmitm_utils.hpp"
 #include "impl/pcap/pcap_file_writer.hpp"
 #include "impl/pcap/pcap_utils.hpp"
 
@@ -68,8 +70,27 @@ namespace ams::ssl::sf::impl {
             std::shared_ptr<::Service> m_forward_service;
             sm::MitmProcessInfo m_client_info;
             PcapFileWriter *m_writer;
+            ams::ssl::sf::VerifyOption m_requested_option = (ams::ssl::sf::VerifyOption)3;
+            bool m_requested_default_verify;
         public:
-            SslConnectionImpl(std::shared_ptr<::Service> &&s, const sm::MitmProcessInfo &c, PcapFileWriter *writter) : m_forward_service(std::move(s)), m_client_info(c), m_writer(writter) { }
+            SslConnectionImpl(std::shared_ptr<::Service> &&s,
+                            const sm::MitmProcessInfo &c, PcapFileWriter *writter)
+                : m_forward_service(std::move(s)), m_client_info(c), m_writer(writter) {
+                if (g_should_disable_ssl_verification) {
+                    Result res;
+                    if (R_FAILED(
+                            res = SetOptionReal(
+                                true, ams::ssl::sf::OptionType::SkipDefaultVerify))) {
+                        AMS_LOG("Failed to set SkipDefaultVerify! %d-%d\n",
+                                res.GetModule() + 2000, res.GetValue());
+                    }
+                    if (R_FAILED(res = SetVerifyOptionReal(
+                                    static_cast<ams::ssl::sf::VerifyOption>(0)))) {
+                        AMS_LOG("Failed to SetVerifyOptionReal(0)! %d-%d\n",
+                                res.GetModule() + 2000, res.GetValue());
+                    }
+                }
+            }
             ~SslConnectionImpl() {
                 if (m_writer != nullptr) {
                     delete m_writer;
@@ -112,6 +133,11 @@ namespace ams::ssl::sf::impl {
             Result ExportKeyingMaterial(const ams::sf::InBuffer &label, const ams::sf::InBuffer &context, const ams::sf::OutBuffer &material);
             Result SetIoTimeout(u32 timeout);
             Result GetIoTimeout(ams::sf::Out<u32> timeout);
+
+            Result SetOptionReal(bool value, const ams::ssl::sf::OptionType &option);
+            Result GetOptionReal(const ams::ssl::sf::OptionType &value, ams::sf::Out<bool> option);
+            Result SetVerifyOptionReal(const ams::ssl::sf::VerifyOption &option);
+            Result SetPrivateOptionReal(const ams::ssl::sf::OptionType &option, u32 value);
     };
 
     static_assert(ams::ssl::sf::IsISslConnection<ams::ssl::sf::impl::SslConnectionImpl>);

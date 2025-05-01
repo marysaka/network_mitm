@@ -1,5 +1,5 @@
 OUTDIR := out
-TITLE_ID := 4200000000000666
+TITLE_ID := 010000000000be00
 SD_ROOT := $(OUTDIR)/sd
 TITLE_DIR := $(SD_ROOT)/atmosphere/contents/$(TITLE_ID)
 
@@ -26,6 +26,7 @@ pack: build
 	@mkdir -p $(TITLE_DIR)/flags
 	@cp network_mitm/out/nintendo_nx_arm64_armv8a/release/network_mitm.nsp $(TITLE_DIR)/exefs.nsp
 	@touch $(TITLE_DIR)/flags/boot2.flag
+	@printf 'ssl\r\nssl:s' > $(TITLE_DIR)/mitm.lst
 
 dist: pack
 	@cd $(SD_ROOT); zip -r ../network_mitm-$(NETWORK_MITM_VERSION).zip ./* > /dev/null; cd ../;

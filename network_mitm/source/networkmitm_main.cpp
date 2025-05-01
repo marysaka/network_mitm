@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "networkmitm_ssl_service_impl.hpp"
+#include "networkmitm_ssl_service_system_impl.hpp"
 #include <stratosphere.hpp>
 
 namespace ams {
@@ -74,12 +75,29 @@ void LogFileLogObserver(const diag::LogMetaData &meta,
 }
 
 void InitializeFileLogger() {
+    char logs_dir_path[ams::fs::EntryNameLengthMax + 1];
+    util::SNPrintf(logs_dir_path, sizeof(logs_dir_path),
+                   "%s:/atmosphere/logs/",
+                   ams::fs::impl::SdCardFileSystemMountName);
+    bool dir_exists;
+    auto result = fs::HasDirectory(&dir_exists, logs_dir_path);
+    if (R_FAILED(result)) {
+        AMS_ABORT("Cannot access SD!");
+    }
+
+    if (!dir_exists) {
+        result = fs::CreateDirectory(logs_dir_path);
+        if (R_FAILED(result)) {
+            AMS_ABORT("Cannot access SD!");
+        }
+    }
+
     char log_file_path[ams::fs::EntryNameLengthMax + 1];
     util::SNPrintf(log_file_path, sizeof(log_file_path),
                    "%s:/atmosphere/logs/network_mitm_observer.log",
                    ams::fs::impl::SdCardFileSystemMountName);
 
-    const auto result = fs::CreateFile(log_file_path, 0);
+    result = fs::CreateFile(log_file_path, 0);
     if (R_FAILED(result) && !fs::ResultPathAlreadyExists::Includes(result)) {
         AMS_ABORT("Cannot create log file!");
     }
@@ -131,7 +149,7 @@ void InitializeSystemModule() {
     /* Initialize settings */
     R_ABORT_UNLESS((Result)::setsysInitialize());
 
-    /* Initialize time for file dating :3 */
+    /* Initialize time for file dating */
     R_ABORT_UNLESS((Result)::timeInitialize());
 }
 
@@ -171,6 +189,17 @@ bool ShouldSslMitm() {
     return false;
 }
 
+bool ShouldDisableSslVerification() {
+    u8 en = 0;
+    if (settings::fwdbg::GetSettingsItemValue(std::addressof(en), sizeof(en),
+                                              "network_mitm",
+                                              "disable_ssl_verification") == sizeof(en)) {
+        return (en != 0);
+    }
+
+    return false;
+}
+
 bool ShouldDumpSslTraffic() {
     u8 en = 0;
     if (settings::fwdbg::GetSettingsItemValue(
@@ -179,26 +208,25 @@ bool ShouldDumpSslTraffic() {
         return (en != 0);
     }
 
-    return true;
+    return false;
 }
 
 namespace ssl::sf::impl {
 const int CAKeyStorageSize = 0x1000;
-constinit u8 g_ca_private_key_storage[CAKeyStorageSize];
-constinit u8 g_ca_public_key_storage[CAKeyStorageSize];
 constinit u8 g_ca_public_key_storage_der[CAKeyStorageSize];
-Certificate g_ca_certificate;
-Span<uint8_t> g_ca_certificate_public_key_der;
-bool g_ca_certificate_has_private_key;
+Span<uint8_t> g_ca_certificate_public_key_der = Span<uint8_t>();
 bool g_should_dump_ssl_traffic;
+bool g_should_disable_ssl_verification;
 PcapLinkType g_link_type;
 
 enum PortIndex {
     PortIndex_SslMitm,
+    PortIndex_SslSMitm,
     PortIndex_Count,
 };
 
 constexpr sm::ServiceName MitmSslServiceName = sm::ServiceName::Encode("ssl");
+constexpr sm::ServiceName MitmSslSServiceName = sm::ServiceName::Encode("ssl:s");
 
 struct ServerOptions {
     // FIXME: Use real values from SSL after reverse
@@ -215,34 +243,40 @@ class ServerManager final
     virtual Result OnNeedsToAccept(int port_index, Server *server) override;
 };
 
-ServerManager g_server_manager;
+ServerManager g_server_manager_ssl;
+ServerManager g_server_manager_ssl_s;
 
 Result ServerManager::OnNeedsToAccept(int port_index, Server *server) {
-    AMS_LOG("OnNeedsToAccept\n");
-
     /* Acknowledge the mitm session. */
     std::shared_ptr<::Service> forward_service;
     sm::MitmProcessInfo client_info;
     server->AcknowledgeMitmSession(std::addressof(forward_service),
                                    std::addressof(client_info));
 
+    Result res;
     switch (port_index) {
     case PortIndex_SslMitm:
-        AMS_LOG("AcceptMitmImpl SSL titleid: %lx\n",
-                (u64)client_info.program_id);
         R_RETURN(this->AcceptMitmImpl(
             server,
             ams::sf::CreateSharedObjectEmplaced<ISslService, SslServiceImpl>(
                 decltype(forward_service)(forward_service), client_info,
                 g_should_dump_ssl_traffic, g_link_type,
-                g_ca_certificate_public_key_der),
+                g_ca_certificate_public_key_der, g_should_disable_ssl_verification),
             forward_service));
-        AMS_UNREACHABLE_DEFAULT_CASE();
+    case PortIndex_SslSMitm:
+        R_RETURN(this->AcceptMitmImpl(
+                server,
+                ams::sf::CreateSharedObjectEmplaced<ISslServiceForSystem, SslServiceForSystemImpl>(
+                    decltype(forward_service)(forward_service), client_info,
+                    g_should_dump_ssl_traffic, g_link_type,
+                    g_ca_certificate_public_key_der, g_should_disable_ssl_verification),
+                forward_service));
+    AMS_UNREACHABLE_DEFAULT_CASE();
     }
 }
 
-constexpr size_t TotalThreads = 5;
-static_assert(TotalThreads >= 1, "TotalThreads");
+constexpr size_t TotalThreads = 2; // raise if needed
+static_assert(TotalThreads >= 2, "TotalThreads");
 constexpr size_t NumExtraThreads = TotalThreads - 1;
 constexpr size_t ThreadStackSize = 0x8000;
 alignas(os::MemoryPageSize) u8
@@ -250,10 +284,16 @@ alignas(os::MemoryPageSize) u8
 
 os::ThreadType g_extra_threads[NumExtraThreads];
 
-void LoopServerThread(void *) {
+void LoopServerThreadSsl(void *) {
     /* Loop forever, servicing our services. */
-    g_server_manager.LoopProcess();
+    g_server_manager_ssl.LoopProcess();
 }
+
+void LoopServerThreadSslS(void *) {
+    /* Loop forever, servicing our services. */
+    g_server_manager_ssl_s.LoopProcess();
+}
+
 
 void ProcessForServerOnAllThreads() {
     /* Initialize threads. */
@@ -262,7 +302,7 @@ void ProcessForServerOnAllThreads() {
             os::GetThreadCurrentPriority(os::GetCurrentThread());
         for (size_t i = 0; i < NumExtraThreads; i++) {
             R_ABORT_UNLESS(os::CreateThread(
-                g_extra_threads + i, LoopServerThread, nullptr,
+                g_extra_threads + i, i % 2 ? LoopServerThreadSslS : LoopServerThreadSsl, nullptr,
                 g_extra_thread_stacks[i], ThreadStackSize, priority));
         }
     }
@@ -275,7 +315,7 @@ void ProcessForServerOnAllThreads() {
     }
 
     /* Loop this thread. */
-    LoopServerThread(nullptr);
+    LoopServerThreadSslS(nullptr);
 
     /* Wait for extra threads to finish. */
     if constexpr (NumExtraThreads > 0) {
@@ -308,14 +348,10 @@ Result ReadFileToBuffer(const char *path, void *buffer, size_t buffer_size,
     R_SUCCEED();
 }
 
-void Initialize(bool should_dump_ssl_traffic) {
-    g_ca_certificate = Certificate(
-        MakeSpan(g_ca_private_key_storage, sizeof(g_ca_private_key_storage)),
-        MakeSpan(g_ca_public_key_storage, sizeof(g_ca_public_key_storage)));
-    g_ca_certificate_public_key_der = MakeSpan(
-        g_ca_public_key_storage_der, sizeof(g_ca_public_key_storage_der));
-    g_ca_certificate_has_private_key = false;
+void Initialize(bool should_dump_ssl_traffic, bool should_disable_ssl_verification) {
     g_should_dump_ssl_traffic = should_dump_ssl_traffic;
+    g_should_disable_ssl_verification = should_disable_ssl_verification;
+    
     g_link_type = PcapLinkType::User;
 
     char pcap_link_type[16];
@@ -324,93 +360,38 @@ void Initialize(bool should_dump_ssl_traffic) {
         "pcap_link_type");
 
     if (read_size != 0) {
-        if (!strcmp(pcap_link_type, "user")) {
+        if (!strncmp(pcap_link_type, "user", 4)) {
             g_link_type = PcapLinkType::User;
-        } else if (!strcmp(pcap_link_type, "ip")) {
+        } else if (!strncmp(pcap_link_type, "ip", 2)) {
             g_link_type = PcapLinkType::Ip;
-        } else if (!strcmp(pcap_link_type, "ethernet")) {
+        } else if (!strncmp(pcap_link_type, "ethernet", 8)) {
             g_link_type = PcapLinkType::Ethernet;
         }
     }
-
-    bool should_fallback_to_cert_gen = false;
 
     char setting_path[ams::fs::EntryNameLengthMax + 1];
     char custom_cert_path[ams::fs::EntryNameLengthMax + 1];
     read_size = settings::fwdbg::GetSettingsItemValue(
         setting_path, sizeof(setting_path), "network_mitm",
-        "custom_ca_public_cert");
+        "custom_ca");
     if (read_size != 0) {
         util::SNPrintf(custom_cert_path, sizeof(custom_cert_path), "%s:/%s",
                        ams::fs::impl::SdCardFileSystemMountName, setting_path);
         AMS_LOG("Attempting to load custom CA public cert at %s\n",
                 custom_cert_path);
-
+        
         size_t out_size;
 
         if (R_SUCCEEDED(ReadFileToBuffer(
-                custom_cert_path, g_ca_certificate.public_key.data(),
-                g_ca_certificate.public_key.size_bytes(), out_size))) {
-            g_ca_certificate.public_key =
-                MakeSpan(g_ca_certificate.public_key.data(), out_size);
-
-            read_size = settings::fwdbg::GetSettingsItemValue(
-                setting_path, sizeof(setting_path), "network_mitm",
-                "custom_ca_private_key");
-
-            if (read_size != 0) {
-                util::SNPrintf(
-                    custom_cert_path, sizeof(custom_cert_path), "%s:/%s",
-                    ams::fs::impl::SdCardFileSystemMountName, setting_path);
-                AMS_LOG("Attempting to load custom CA private key at %s\n",
-                        custom_cert_path);
-                if (R_SUCCEEDED(ReadFileToBuffer(
-                        custom_cert_path, g_ca_certificate.private_key.data(),
-                        g_ca_certificate.private_key.size_bytes(), out_size))) {
-                    g_ca_certificate.private_key =
-                        MakeSpan(g_ca_certificate.private_key.data(), out_size);
-                    g_ca_certificate_has_private_key = true;
-                } else {
-                    AMS_LOG("Failed to load custom CA private key at %s\n",
-                            custom_cert_path);
-                }
-            } else {
-                AMS_LOG("No custom CA private key provided, SSL certificate "
-                        "mitm will not be performed.\n");
-                AMS_LOG("To provide it, set \"custom_ca_private_key = "
-                        "str!my_ca.key\" in system_settings.ini\n");
-                AMS_LOG("MAKE SURE THERE IS NO PASSWORD SET\n");
-            }
-
-            if (!should_fallback_to_cert_gen) {
-                size_t der_cert_size;
-                if (!ConvertPemToDer(g_ca_certificate.public_key,
-                                     g_ca_certificate_public_key_der,
-                                     der_cert_size)) {
-                    AMS_LOG("Cannot convert CA to DER!\n");
-                    should_fallback_to_cert_gen = true;
-                    g_ca_certificate_has_private_key = false;
-                } else {
-                    g_ca_certificate_public_key_der = MakeSpan(
-                        g_ca_certificate_public_key_der.data(), der_cert_size);
-                }
-            }
+                custom_cert_path, g_ca_public_key_storage_der,
+                sizeof(g_ca_public_key_storage_der), out_size))) {
+            AMS_LOG("Loaded custom CA.\n");
+            g_ca_certificate_public_key_der = MakeSpan(
+                g_ca_public_key_storage_der, out_size);
         } else {
-            AMS_LOG("Failed to load custom CA public cert at %s\n",
+            AMS_LOG("Failed to load custom CA public cert file at %s\n",
                     custom_cert_path);
-            should_fallback_to_cert_gen = true;
         }
-    }
-
-    if (should_fallback_to_cert_gen) {
-        AMS_LOG("No custom CA provided.\n");
-        AMS_LOG("To provide the public cert, set \"custom_ca_public_cert = "
-                "str!my_ca.pem\" in system_settings.ini\n");
-        AMS_LOG("To provide the private key, set \"custom_ca_private_key = "
-                "str!my_ca.key\" in system_settings.ini\n");
-        AMS_LOG("MAKE SURE THERE IS NO PASSWORD SET ON THE PRIVATE KEY\n");
-
-        g_ca_certificate_has_private_key = false;
     }
 }
 } // namespace ssl::sf::impl
@@ -433,16 +414,26 @@ void Main() {
     using namespace ams::ssl::sf::impl;
 
     AMS_LOG("network_mitm enabled\n");
-    const bool should_dump_ssl_traffic = ShouldDumpSslTraffic();
-    Initialize(should_dump_ssl_traffic);
-
-    if (!should_dump_ssl_traffic) {
-        AMS_LOG("SSL service traffic dumping disabled\n");
+    bool should_dump_ssl_traffic = ShouldDumpSslTraffic();
+    if (should_dump_ssl_traffic) {
+        AMS_LOG("SSL service traffic dumping is temporarily disabled due to a bug\n");
+        should_dump_ssl_traffic = false;
     }
 
+    const bool should_disable_ssl_verification = ShouldDisableSslVerification();
+    if (!should_disable_ssl_verification) {
+        AMS_LOG("SSL certificate verification will remain enabled\n");
+    }
+
+
+    Initialize(should_dump_ssl_traffic, should_disable_ssl_verification);
+
     /* Create mitm servers. */
-    R_ABORT_UNLESS((g_server_manager.RegisterMitmServer<SslServiceImpl>(
+    R_ABORT_UNLESS((g_server_manager_ssl.RegisterMitmServer<SslServiceImpl>(
         PortIndex_SslMitm, MitmSslServiceName)));
+    if (hos::GetVersion() > hos::Version_15_0_0)
+        R_ABORT_UNLESS((g_server_manager_ssl_s.RegisterMitmServer<SslServiceForSystemImpl>(
+            PortIndex_SslSMitm, MitmSslSServiceName)));
 
     /* Loop forever, servicing our services. */
     AMS_LOG("Accepting requests.\n");

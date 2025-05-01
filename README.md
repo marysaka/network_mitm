@@ -3,10 +3,11 @@
 Nintendo Switch Network MITM sysmodule.
 
 network_mitm allows you to:
-- Dump traffic from SSL of the running game (NEX,...) in PCAP files.
-- Mitm ssl to replace `NintendoClass2CAG3` CA with a user provided one (useful for NPLN traffic capture).
+- Disable verification of servers' SSL certificates.
+- Dump decrypted traffic from the running game (NEX, NPLN, etc.) in PCAP files.
+- Replace Nintendo CAs with a user provided one for more secure SSL proxy MITM.
 
-More features might appears depending of the needs.
+More features might appear depending on user needs. Please create an issue/PR if you have an idea!
 
 ## Configuration
 The following configuration should be added to `/atmosphere/config/system_settings.ini`:
@@ -14,15 +15,22 @@ The following configuration should be added to `/atmosphere/config/system_settin
 ```ini
 ; network_mitm config
 [network_mitm]
-; Enable SSL: This should be set to 1 for certificate swapping, and also for PCAP capturing.
+; Enable SSL: this should be set to 1 for any of the options below to be active.
 enable_ssl = u8!0x1
-; Root CA filename: this should be present in the root of the SD (sd:/rootCA.pem for the below example)
-custom_ca_public_cert = str!rootCA.pem
-; By default, the sysmodule will dump decrypted network traffic user-link PCAPs to the SD card.
-; Uncomment this line to disable.
-; should_dump_ssl_traffic = u8!0x0
+; Disable SSL verification: this should be set to 1 if you wish to disable certificate validity checks.
+; Useful for instance for SSL proxy MITMing purposes for programs using nn::ssl BSD-style sockets.
+; This does not impact browser traffic, see the next option to help with that.
+; Careful: anyone on the network could see your console's full traffic if they can intercept your traffic.
+disable_ssl_verification = u8!0x1
+; Root CA filename: replaces Nintendo CAs with the specified CA in DER form.
+; This should be present in the root of the SD (sd:/rootCA.der for the below example)
+; Leave commented to disable.
+custom_ca = str!rootCA.der
+; Dump decrypted network traffic user-link PCAPs to the SD card.
+; Note: this isn't possible currently due to a bug (likely threading-related).
+should_dump_ssl_traffic = u8!0x1
 ; Possible values "ethernet", "ip" or "user"
-; pcap_link_type = str!user
+pcap_link_type = str!user
 ```
 
 ## Building

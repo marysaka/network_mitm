@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "pcap_file_writter.hpp"
+#include "pcap_file_writer.hpp"
 #include "pcap_utils.hpp"
 
 #include <netinet/tcp.h>

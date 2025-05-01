@@ -10,7 +10,7 @@ jobs:
         shell: 'bash'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       
@@ -29,13 +29,15 @@ jobs:
         run: make PREFIX="ccache aarch64-none-elf-"
 
       - name: Uploading executable out directory
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: network_mitm.zip
           path: network_mitm/out/*
 
       - name: Uploading release
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: network_mitm.zip
           path: out/*.zip
+          if-no-files-found: error
+          compression-level: 9

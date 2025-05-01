@@ -74,18 +74,34 @@ void LogFileLogObserver(const diag::LogMetaData &meta,
 }
 
 void InitializeFileLogger() {
-    char log_file_path[ams::fs::EntryNameLengthMax + 1];
-    util::SNPrintf(log_file_path, sizeof(log_file_path),
+    bool dir_exists;
+    char path[ams::fs::EntryNameLengthMax + 1];
+    util::SNPrintf(path, sizeof(path), "%s:/atmosphere/logs/",
+                   ams::fs::impl::SdCardFileSystemMountName);
+
+    auto result = fs::HasDirectory(&dir_exists, path);
+    if (R_FAILED(result)) {
+        AMS_ABORT("Cannot access the sdcard!");
+    }
+
+    if (!dir_exists) {
+        result = fs::CreateDirectory(path);
+        if (R_FAILED(result)) {
+            AMS_ABORT("Cannot create logs directory on the scard!");
+        }
+    }
+
+    util::SNPrintf(path, sizeof(path),
                    "%s:/atmosphere/logs/network_mitm_observer.log",
                    ams::fs::impl::SdCardFileSystemMountName);
 
-    const auto result = fs::CreateFile(log_file_path, 0);
+    result = fs::CreateFile(path, 0);
     if (R_FAILED(result) && !fs::ResultPathAlreadyExists::Includes(result)) {
         AMS_ABORT("Cannot create log file!");
     }
 
-    R_ABORT_UNLESS(fs::OpenFile(std::addressof(g_logger_file), log_file_path,
-                                fs::OpenMode_All));
+    R_ABORT_UNLESS(
+        fs::OpenFile(std::addressof(g_logger_file), path, fs::OpenMode_All));
 
     g_logger_file_ofs = 0;
 

@@ -16,12 +16,12 @@
 #pragma once
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
-#include "networkmitm_ssl_types.hpp"
 #include "networkmitm_utils.hpp"
 #include "impl/pcap/pcap_file_writer.hpp"
 #include "impl/pcap/pcap_utils.hpp"
 
 using namespace ams::ssl::mitm::pcap;
+
 
 #define AMS_INTERFACE_ISSLCONNECTION_INFO(C, H) \
     AMS_SF_METHOD_INFO(C, H, 0, Result, SetSocketDescriptor, (u32 input_socket_fd, ams::sf::Out<u32> output_socket_fd), (input_socket_fd, output_socket_fd)) \
@@ -59,7 +59,9 @@ using namespace ams::ssl::mitm::pcap;
     AMS_SF_METHOD_INFO(C, H, 32, Result, GetSrtpCipher, (ams::sf::Out<u16> cipher), (cipher), hos::Version_16_0_0) \
     AMS_SF_METHOD_INFO(C, H, 33, Result, ExportKeyingMaterial, (const ams::sf::InBuffer &label, const ams::sf::InBuffer &context, const ams::sf::OutBuffer &material), (label, context, material), hos::Version_16_0_0) \
     AMS_SF_METHOD_INFO(C, H, 34, Result, SetIoTimeout, (u32 timeout), (timeout), hos::Version_16_0_0) \
-    AMS_SF_METHOD_INFO(C, H, 35, Result, GetIoTimeout, (ams::sf::Out<u32> timeout), (timeout), hos::Version_16_0_0)
+    AMS_SF_METHOD_INFO(C, H, 35, Result, GetIoTimeout, (ams::sf::Out<u32> timeout), (timeout), hos::Version_16_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 36, Result, GetSessionTicket, (const ams::sf::OutBuffer &session_ticket, ams::sf::Out<u32> out_session_ticket_size), (session_ticket, out_session_ticket_size), hos::Version_20_0_0) \
+    AMS_SF_METHOD_INFO(C, H, 37, Result, SetSessionTicket, (const ams::sf::InBuffer &session_ticket), (session_ticket), hos::Version_20_0_0)
 
 AMS_SF_DEFINE_INTERFACE(ams::ssl::sf, ISslConnection, AMS_INTERFACE_ISSLCONNECTION_INFO, 0xA9B8D9AA)
 
@@ -140,6 +142,8 @@ namespace ams::ssl::sf::impl {
             Result GetOptionReal(const ams::ssl::sf::OptionType &value, ams::sf::Out<bool> option);
             Result SetVerifyOptionReal(const ams::ssl::sf::VerifyOption &option);
             Result SetPrivateOptionReal(const ams::ssl::sf::OptionType &option, u32 value);
+            Result GetSessionTicket(const ams::sf::OutBuffer &session_ticket, ams::sf::Out<u32> out_session_ticket_size);
+            Result SetSessionTicket(const ams::sf::InBuffer &session_ticket);
     };
 
     static_assert(ams::ssl::sf::IsISslConnection<ams::ssl::sf::impl::SslConnectionImpl>);

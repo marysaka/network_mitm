@@ -323,14 +323,16 @@ SslConnectionImpl::GetDtlsHandshakeTimeout(const ams::sf::OutBuffer &timespan) {
     R_SUCCEED();
 }
 
-Result SslConnectionImpl::SetPrivateOptionReal(
-    const ams::ssl::sf::OptionType &option, u32 value) {
+Result
+SslConnectionImpl::SetPrivateOptionReal(const ams::ssl::sf::OptionType &option,
+                                        u32 value) {
     return sslConnectionSetPrivateOption_sfMitm(m_forward_service.get(), value,
                                                 static_cast<u32>(option));
 }
 
 Result
-SslConnectionImpl::SetPrivateOption(const ams::ssl::sf::OptionType &option, u32 value) {
+SslConnectionImpl::SetPrivateOption(const ams::ssl::sf::OptionType &option,
+                                    u32 value) {
     if (g_should_disable_ssl_verification &&
         option == ams::ssl::sf::OptionType::SkipDefaultVerify) {
         m_requested_default_verify = value;
@@ -375,6 +377,25 @@ Result SslConnectionImpl::SetIoTimeout(u32 timeout) {
 Result SslConnectionImpl::GetIoTimeout(ams::sf::Out<u32> timeout) {
     R_TRY(sslConnectionGetIoTimeout_sfMitm(m_forward_service.get(),
                                            timeout.GetPointer()));
+
+    R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::GetSessionTicket(const ams::sf::OutBuffer &session_ticket,
+                                    ams::sf::Out<u32> out_session_ticket_size) {
+    R_TRY(sslConnectionGetSessionTicket_sfMitm(
+        m_forward_service.get(), session_ticket.GetPointer(),
+        session_ticket.GetSize(), out_session_ticket_size.GetPointer()));
+
+    R_SUCCEED();
+}
+
+Result
+SslConnectionImpl::SetSessionTicket(const ams::sf::InBuffer &session_ticket) {
+    R_TRY(sslConnectionSetSessionTicket_sfMitm(m_forward_service.get(),
+                                               session_ticket.GetPointer(),
+                                               session_ticket.GetSize()));
 
     R_SUCCEED();
 }

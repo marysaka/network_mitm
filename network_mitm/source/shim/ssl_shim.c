@@ -690,3 +690,20 @@ Result sslConnectionSetIoTimeout_sfMitm(Service *s, u32 timeout) {
 Result sslConnectionGetIoTimeout_sfMitm(Service *s, u32 *timeout) {
     return serviceMitmDispatchOut(s, 35, *timeout);
 }
+
+Result sslConnectionGetSessionTicket_sfMitm(Service *s, void *session_ticket,
+                                            size_t session_ticket_size,
+                                            u32 *out_session_ticket_size) {
+    return serviceMitmDispatchOut(
+        s, 36, *out_session_ticket_size,
+        .buffer_attrs = {SfBufferAttr_Out | SfBufferAttr_HipcMapAlias},
+        .buffers = {{session_ticket, session_ticket_size}});
+}
+
+Result sslConnectionSetSessionTicket_sfMitm(Service *s,
+                                            const void *session_ticket,
+                                            size_t session_ticket_size) {
+    return serviceMitmDispatch(
+        s, 37, .buffer_attrs = {SfBufferAttr_In | SfBufferAttr_HipcMapAlias},
+        .buffers = {{session_ticket, session_ticket_size}});
+}

@@ -17,12 +17,6 @@
 #include <stratosphere.hpp>
 #include "networkmitm_ssl_types.hpp"
 
-// We do not have an up to date Atmosphere-libs but this should be enough for now.
-// XXX: Remove me once it get updated.
-namespace ams::hos {
-    const Version Version_20_0_0 = static_cast<Version>(ATMOSPHERE_TARGET_FIRMWARE(20,  0,  0));
-}
-
 namespace ams::ssl::sf::impl {
     extern bool g_should_mitm_all;
     extern bool g_should_disable_ssl_verification;

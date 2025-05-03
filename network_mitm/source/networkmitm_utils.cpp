@@ -93,7 +93,8 @@ PatchCertificates(const ams::sf::InArray<ams::ssl::sf::CaCertificateId> &ids,
 
     for (size_t i = 0; i < ids.GetSize(); i++) {
         if (ids[i] == ams::ssl::sf::CaCertificateId::NintendoClass2CAG3 ||
-            ids[i] == ams::ssl::sf::CaCertificateId::All) {
+            ids[i] == ams::ssl::sf::CaCertificateId::All ||
+            ids[i] == ams::ssl::sf::CaCertificateId::NewAll) {
             should_inject = true;
             break;
         }
@@ -143,7 +144,8 @@ Result PatchCertificateBufSize(
 
     for (size_t i = 0; i < ids.GetSize(); i++) {
         if (ids[i] == ams::ssl::sf::CaCertificateId::NintendoClass2CAG3 ||
-            ids[i] == ams::ssl::sf::CaCertificateId::All) {
+            ids[i] == ams::ssl::sf::CaCertificateId::All ||
+            ids[i] == ams::ssl::sf::CaCertificateId::NewAll) {
             should_inject = true;
             break;
         }

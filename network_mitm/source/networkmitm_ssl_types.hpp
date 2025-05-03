@@ -153,6 +153,7 @@ namespace ams::ssl::sf {
         SslRrNetDevNtdNintendo63 = 32863,
         SslRrNetDevNtdNintendo64 = 32864,
         All = 4294967295,
+        NewAll = 4294967294,
     };
 
     enum class CertificateFormat : u32 {

@@ -158,6 +158,7 @@ typedef enum {
     CaCertificateId_SslRrNetDevNtdNintendo63_sf = 32863,
     CaCertificateId_SslRrNetDevNtdNintendo64_sf = 32864,
     CaCertificateId_All_sf = 4294967295,
+    CaCertificateId_NewAll_sf = 4294967294,
 } CaCertificateId_sf;
 
 typedef enum {

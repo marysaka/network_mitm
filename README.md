@@ -49,7 +49,7 @@ git submodule update --init --recursive
     - `switch-dev`
     - `switch-mbedtls`
     - `switch-libjpeg-turbo`
-    - `libnx`
+    - `libnx` (Currently requires master branch)
 
 2. Run `make` command.
 
